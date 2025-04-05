@@ -1,0 +1,595 @@
+---
+// Gemini API 키는 환경 변수에서 가져옵니다
+const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
+---
+
+<div class="chat-container bg-base-100 rounded-lg shadow-lg p-4 h-[500px] flex flex-col">
+  <div class="flex justify-between items-center mb-2">
+    <h3 class="font-bold text-lg">Chat with me</h3>
+    <button id="toggle-chat" class="btn btn-sm btn-ghost">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+      </svg>
+    </button>
+  </div>
+  <div id="chat-content" class="flex flex-col flex-1 overflow-hidden">
+    <div id="chat-messages" class="chat-messages flex-1 overflow-y-auto mb-4 space-y-4">
+      <div class="chat-message assistant">
+        <p class="font-bold">Hello! My name is Kangbeen Ko.<br>Ask anything about me!</p>
+      </div>
+      <!-- 메시지들이 여기에 표시됩니다 -->
+    </div>
+    <div class="chat-input-container border-t border-base-300 pt-4 mt-auto">
+      <form id="chat-form" class="flex gap-1">
+        <input
+          type="text"
+          id="user-input"
+          placeholder="메시지를 입력하세요..."
+          class="input input-bordered flex-1"
+        />
+        <button
+          type="submit"
+          class="btn btn-primary"
+        >
+          전송
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- API 키를 메타 태그로 추가 -->
+<meta name="gemini-api-key" content={API_KEY} />
+
+<style>
+  /* 전역 애니메이션 스타일 */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes typing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-0.5rem); }
+  }
+  
+  /* 기존 스타일은 유지 */
+  .chat-container {
+    max-width: 100%;
+    margin: 0 auto;
+    transition: all 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+  }
+  
+  #chat-content {
+    transition: all 0.3s ease-in-out;
+    opacity: 1;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden; /* 중요: 내부 스크롤만 허용하고 외부 스크롤은 방지 */
+  }
+  
+  #chat-content.collapsed {
+    opacity: 0;
+    pointer-events: none;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .chat-container.collapsed {
+    height: auto;
+    padding-bottom: 0.5rem;
+  }
+  
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.5rem; /* 스크롤바 공간 확보 */
+  }
+  
+  .chat-input-container {
+    position: sticky;
+    bottom: 0;
+    background-color: transparent;
+    z-index: 10;
+    padding-top: 0.5rem;
+  }
+  
+  @media (max-width: 1024px) {
+    #toggle-chat svg {
+      transform: rotate(-90deg);
+      transition: transform 0.3s ease-in-out;
+    }
+  }
+  
+  /* 채팅 메시지 기본 스타일 */
+  .chat-message {
+    animation: fadeIn 0.3s ease-in-out !important;
+    position: relative !important;
+    max-width: 80% !important;
+    width: fit-content !important; /* 메시지 크기에 맞게 너비 조절 */
+    margin-bottom: 1rem !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 1rem !important;
+  }
+  
+  /* 사용자 메시지 스타일 - 연보라색 버블, 오른쪽 정렬 */
+  .chat-message.user {
+    background-color: rgba(147, 112, 219, 0.2) !important; /* 연보라색 */
+    margin-left: auto !important;
+    border-radius: 1rem 1rem 0 1rem !important;
+    text-align: right !important;
+  }
+  
+  /* 어시스턴트 메시지 스타일 - 연파란색 버블, 왼쪽 정렬 */
+  .chat-message.assistant {
+    background-color: rgba(135, 206, 235, 0.2) !important; /* 연파란색 */
+    margin-right: auto !important;
+    border-radius: 1rem 1rem 1rem 0 !important;
+    text-align: left !important;
+  }
+  
+  /* 말풍선 꼬리 스타일 */
+  .chat-message::before {
+    content: '' !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-style: solid !important;
+  }
+  
+  /* 사용자 메시지 말풍선 꼬리 */
+  .chat-message.user::before {
+    right: -0.5rem !important;
+    bottom: 0 !important;
+    border-width: 0.5rem 0 0.5rem 0.5rem !important;
+    border-color: transparent transparent transparent rgba(147, 112, 219, 0.2) !important; /* 연보라색 */
+  }
+  
+  /* 어시스턴트 메시지 말풍선 꼬리 */
+  .chat-message.assistant::before {
+    left: -0.5rem !important;
+    bottom: 0 !important;
+    border-width: 0.5rem 0.5rem 0.5rem 0 !important;
+    border-color: transparent rgba(135, 206, 235, 0.2) transparent transparent !important; /* 연파란색 */
+  }
+  
+  /* 타이핑 표시기 스타일 */
+  .typing-indicator {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem !important;
+    background-color: rgba(135, 206, 235, 0.2) !important; /* 연파란색 */
+    border-radius: 1rem 1rem 1rem 0 !important;
+    margin-right: auto !important;
+    max-width: 80% !important;
+    width: fit-content !important; /* 메시지 크기에 맞게 너비 조절 */
+    position: relative !important;
+  }
+  
+  /* 타이핑 표시기 말풍선 꼬리 */
+  .typing-indicator::before {
+    content: '' !important;
+    position: absolute !important;
+    left: -0.5rem !important;
+    bottom: 0 !important;
+    border-width: 0.5rem 0.5rem 0.5rem 0 !important;
+    border-style: solid !important;
+    border-color: transparent rgba(135, 206, 235, 0.2) transparent transparent !important; /* 연파란색 */
+  }
+  
+  /* 타이핑 표시기 점 스타일 */
+  .typing-indicator span {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+    background-color: currentColor !important;
+    border-radius: 50% !important;
+    animation: typing 1s infinite !important;
+  }
+  
+  /* 타이핑 표시기 점 애니메이션 지연 */
+  .typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s !important;
+  }
+  
+  .typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s !important;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleButton = document.getElementById('toggle-chat');
+    const chatContent = document.getElementById('chat-content');
+    const chatContainer = document.querySelector('.chat-container');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const chatMessages = document.getElementById('chat-messages');
+    
+    // 채팅 기록 초기화
+    let chatHistory = [];
+    
+    // 서버 연결 상태 추적
+    let isServerConnected = true;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const reconnectDelay = 3000; // 3초
+    
+    // WebSocket 연결 오류 처리
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+      // WebSocket 연결 오류 메시지 필터링
+      if (args.length > 0 && typeof args[0] === 'string' && 
+          (args[0].includes('WebSocket connection') || 
+           args[0].includes('server connection lost'))) {
+        // 개발 환경에서만 로그 출력 (선택적)
+        if (import.meta.env.DEV) {
+          originalConsoleError.apply(console, ['[DEV]', ...args]);
+        }
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
+    
+    // 서버 연결 상태 확인 함수
+    function checkServerConnection() {
+      return new Promise((resolve) => {
+        fetch('/api/health', { method: 'HEAD' })
+          .then(() => {
+            isServerConnected = true;
+            reconnectAttempts = 0;
+            resolve(true);
+          })
+          .catch(() => {
+            isServerConnected = false;
+            resolve(false);
+          });
+      });
+    }
+    
+    // 서버 재연결 시도 함수
+    async function attemptReconnect() {
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        console.log('최대 재연결 시도 횟수에 도달했습니다. 오프라인 모드로 전환합니다.');
+        addMessage('서버 연결이 끊어졌습니다. 오프라인 모드로 전환되었습니다.', 'assistant');
+        return false;
+      }
+      
+      reconnectAttempts++;
+      console.log(`서버 재연결 시도 중... (${reconnectAttempts}/${maxReconnectAttempts})`);
+      
+      // 재연결 메시지 표시
+      const reconnectMessage = addMessage(`서버 연결이 끊어졌습니다. 재연결 시도 중... (${reconnectAttempts}/${maxReconnectAttempts})`, 'assistant');
+      
+      // 일정 시간 후 재연결 시도
+      await new Promise(resolve => setTimeout(resolve, reconnectDelay));
+      
+      const isConnected = await checkServerConnection();
+      
+      if (isConnected) {
+        console.log('서버에 재연결되었습니다.');
+        reconnectMessage.remove();
+        addMessage('서버에 재연결되었습니다. 정상적으로 작동합니다.', 'assistant');
+        return true;
+      } else {
+        reconnectMessage.remove();
+        return await attemptReconnect();
+      }
+    }
+    
+    // 오프라인 응답 생성 함수
+    function generateOfflineResponse(userMessage) {
+      const offlineResponses = [
+        "죄송합니다. 현재 서버에 연결할 수 없습니다. 오프라인 모드에서는 제한된 응답만 가능합니다.",
+        "서버 연결이 끊어졌습니다. 나중에 다시 시도해주세요.",
+        "오프라인 모드에서는 자세한 응답을 제공할 수 없습니다. 서버 연결이 복구되면 다시 시도해주세요.",
+        "현재 서버와 통신할 수 없습니다. 기본적인 질문에만 답변할 수 있습니다.",
+        "서버 연결 문제가 발생했습니다. 오프라인 모드에서는 제한된 기능만 사용 가능합니다."
+      ];
+      
+      // 간단한 질문에 대한 오프라인 응답
+      const simpleResponses = {
+        "안녕": "안녕하세요! 현재 오프라인 모드입니다.",
+        "이름": "제 이름은 Kangbeen Ko입니다. 현재 오프라인 모드입니다.",
+        "소개": "저는 Kangbeen Ko입니다. 현재 오프라인 모드에서는 자세한 소개를 제공할 수 없습니다.",
+        "도움": "현재 오프라인 모드입니다. 서버 연결이 복구되면 더 자세한 도움을 드릴 수 있습니다."
+      };
+      
+      // 간단한 질문에 대한 응답 확인
+      for (const [key, response] of Object.entries(simpleResponses)) {
+        if (userMessage.includes(key)) {
+          return response;
+        }
+      }
+      
+      // 기본 오프라인 응답 반환
+      return offlineResponses[Math.floor(Math.random() * offlineResponses.length)];
+    }
+    
+    if (toggleButton && chatContent && chatContainer) {
+      // 모바일 환경에서 초기 상태 설정
+      const isMobile = window.innerWidth <= 1024;
+      
+      // 초기 상태 설정을 약간 지연시켜 트랜지션이 적용되도록 함
+      setTimeout(() => {
+        if (isMobile) {
+          chatContent.classList.add('collapsed');
+          chatContainer.classList.add('collapsed');
+          
+          // 모바일에서는 아이콘을 오른쪽 방향으로 설정
+          const svg = toggleButton.querySelector('svg');
+          if (svg) {
+            svg.innerHTML = '<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />';
+          }
+        }
+      }, 50);
+      
+      toggleButton.addEventListener('click', () => {
+        // 트랜지션을 위해 requestAnimationFrame 사용
+        requestAnimationFrame(() => {
+          chatContent.classList.toggle('collapsed');
+          chatContainer.classList.toggle('collapsed');
+          
+          // 버튼 아이콘 변경
+          const svg = toggleButton.querySelector('svg');
+          if (svg) {
+            if (chatContent.classList.contains('collapsed')) {
+              svg.innerHTML = '<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />';
+            } else {
+              svg.innerHTML = '<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />';
+            }
+          }
+        });
+      });
+    }
+    
+    // 채팅 폼 제출 이벤트 처리
+    if (chatForm && userInput && chatMessages) {
+      chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const userMessage = userInput.value.trim();
+        if (!userMessage) return;
+        
+        // 사용자 메시지 표시
+        addMessage(userMessage, 'user');
+        userInput.value = '';
+        
+        // 타이핑 표시기 추가
+        const typingIndicator = addTypingIndicator();
+        
+        try {
+          // 서버 연결 상태 확인
+          if (!isServerConnected) {
+            // 서버 재연결 시도
+            const reconnected = await attemptReconnect();
+            if (!reconnected) {
+              // 재연결 실패 시 오프라인 응답 생성
+              typingIndicator.remove();
+              const offlineResponse = generateOfflineResponse(userMessage);
+              addMessage(offlineResponse, 'assistant');
+              return;
+            }
+          }
+          
+          // API 엔드포인트 호출
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: userMessage,
+              history: chatHistory,
+            }),
+          });
+          
+          // 타이핑 표시기 제거
+          typingIndicator.remove();
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: '알 수 없는 오류가 발생했습니다.' }));
+            throw new Error(errorData.error || 'API 요청 실패');
+          }
+          
+          const data = await response.json();
+          
+          // 응답 메시지 표시
+          addMessage(data.response, 'assistant');
+          
+          // 채팅 기록 업데이트
+          chatHistory.push(
+            { role: 'user', parts: [{ text: userMessage }] },
+            { role: 'model', parts: [{ text: data.response }] }
+          );
+          
+        } catch (error) {
+          console.error('채팅 오류:', error);
+          typingIndicator.remove();
+          
+          // 서버 연결 상태 업데이트
+          isServerConnected = false;
+          
+          // 오프라인 응답 생성
+          const offlineResponse = generateOfflineResponse(userMessage);
+          addMessage(offlineResponse, 'assistant');
+        }
+      });
+    }
+    
+    // 메시지 추가 함수
+    function addMessage(text, role) {
+      // 디버깅을 위한 콘솔 로그
+      console.log('Adding message:', text, 'with role:', role);
+      
+      // 메시지 요소 생성
+      const messageDiv = document.createElement('div');
+      
+      // 클래스 추가 (순서 중요)
+      messageDiv.classList.add('chat-message');
+      messageDiv.classList.add(role);
+      
+      // 인라인 스타일 적용
+      messageDiv.style.animation = 'fadeIn 0.3s ease-in-out';
+      messageDiv.style.position = 'relative';
+      messageDiv.style.maxWidth = '80%';
+      messageDiv.style.width = 'fit-content'; // 메시지 크기에 맞게 너비 조절
+      messageDiv.style.marginBottom = '1rem';
+      messageDiv.style.padding = '0.75rem 1rem';
+      messageDiv.style.borderRadius = '1rem';
+      
+      // 역할에 따른 스타일 적용
+      if (role === 'user') {
+        messageDiv.style.backgroundColor = 'rgba(147, 112, 219, 0.2)';
+        messageDiv.style.marginLeft = 'auto';
+        messageDiv.style.borderRadius = '1rem 1rem 0 1rem';
+        messageDiv.style.textAlign = 'right';
+        
+        // 말풍선 꼬리 추가
+        const tail = document.createElement('div');
+        tail.style.position = 'absolute';
+        tail.style.right = '-0.5rem';
+        tail.style.bottom = '0';
+        tail.style.width = '0';
+        tail.style.height = '0';
+        tail.style.borderStyle = 'solid';
+        tail.style.borderWidth = '0.5rem 0 0.5rem 0.5rem';
+        tail.style.borderColor = 'transparent transparent transparent rgba(147, 112, 219, 0.2)';
+        messageDiv.appendChild(tail);
+      } else if (role === 'assistant') {
+        messageDiv.style.backgroundColor = 'rgba(135, 206, 235, 0.2)';
+        messageDiv.style.marginRight = 'auto';
+        messageDiv.style.borderRadius = '1rem 1rem 1rem 0';
+        messageDiv.style.textAlign = 'left';
+        
+        // 말풍선 꼬리 추가
+        const tail = document.createElement('div');
+        tail.style.position = 'absolute';
+        tail.style.left = '-0.5rem';
+        tail.style.bottom = '0';
+        tail.style.width = '0';
+        tail.style.height = '0';
+        tail.style.borderStyle = 'solid';
+        tail.style.borderWidth = '0.5rem 0.5rem 0.5rem 0';
+        tail.style.borderColor = 'transparent rgba(135, 206, 235, 0.2) transparent transparent';
+        messageDiv.appendChild(tail);
+      }
+      
+      // 텍스트에 줄바꿈이 있는 경우 <br> 태그로 변환
+      const formattedText = text.replace(/\n/g, '<br>');
+      
+      // 초기 메시지와 동일한 HTML 구조 사용 (font-bold 클래스 추가)
+      const pElement = document.createElement('p');
+      pElement.className = 'font-bold';
+      pElement.innerHTML = formattedText;
+      messageDiv.insertBefore(pElement, messageDiv.firstChild);
+      
+      // 메시지 추가
+      chatMessages.appendChild(messageDiv);
+      
+      // 스크롤을 맨 아래로 이동
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // 디버깅을 위한 콘솔 로그
+      console.log('Message element:', messageDiv);
+      console.log('Message classes:', messageDiv.className);
+      
+      // 스타일 확인
+      const computedStyle = window.getComputedStyle(messageDiv);
+      console.log('Computed style:', {
+        backgroundColor: computedStyle.backgroundColor,
+        marginLeft: computedStyle.marginLeft,
+        marginRight: computedStyle.marginRight,
+        borderRadius: computedStyle.borderRadius,
+        textAlign: computedStyle.textAlign,
+        width: computedStyle.width
+      });
+      
+      // 초기 메시지와 비교
+      const initialMessage = document.querySelector('.chat-message.assistant');
+      if (initialMessage) {
+        console.log('Initial message classes:', initialMessage.className);
+        const initialStyle = window.getComputedStyle(initialMessage);
+        console.log('Initial message style:', {
+          backgroundColor: initialStyle.backgroundColor,
+          marginLeft: initialStyle.marginLeft,
+          marginRight: initialStyle.marginRight,
+          borderRadius: initialStyle.borderRadius,
+          textAlign: initialStyle.textAlign,
+          width: initialStyle.width
+        });
+      }
+      
+      return messageDiv; // 메시지 요소 반환 (재연결 메시지 제거를 위해)
+    }
+    
+    // 타이핑 표시기 추가 함수
+    function addTypingIndicator() {
+      const indicator = document.createElement('div');
+      indicator.className = 'typing-indicator';
+      
+      // 인라인 스타일 적용
+      indicator.style.display = 'flex';
+      indicator.style.alignItems = 'center';
+      indicator.style.gap = '0.5rem';
+      indicator.style.padding = '0.5rem';
+      indicator.style.backgroundColor = 'rgba(135, 206, 235, 0.2)';
+      indicator.style.borderRadius = '1rem 1rem 1rem 0';
+      indicator.style.marginRight = 'auto';
+      indicator.style.maxWidth = '80%';
+      indicator.style.width = 'fit-content'; // 메시지 크기에 맞게 너비 조절
+      indicator.style.position = 'relative';
+      
+      // 말풍선 꼬리 추가
+      const tail = document.createElement('div');
+      tail.style.position = 'absolute';
+      tail.style.left = '-0.5rem';
+      tail.style.bottom = '0';
+      tail.style.width = '0';
+      tail.style.height = '0';
+      tail.style.borderStyle = 'solid';
+      tail.style.borderWidth = '0.5rem 0.5rem 0.5rem 0';
+      tail.style.borderColor = 'transparent rgba(135, 206, 235, 0.2) transparent transparent';
+      indicator.appendChild(tail);
+      
+      // 점 추가
+      for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('span');
+        dot.style.width = '0.5rem';
+        dot.style.height = '0.5rem';
+        dot.style.backgroundColor = 'currentColor';
+        dot.style.borderRadius = '50%';
+        dot.style.animation = 'typing 1s infinite';
+        dot.style.animationDelay = `${i * 0.2}s`;
+        indicator.appendChild(dot);
+      }
+      
+      chatMessages.appendChild(indicator);
+      
+      // 스크롤을 맨 아래로 이동
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      return indicator;
+    }
+    
+    // 주기적으로 서버 연결 상태 확인
+    setInterval(async () => {
+      if (!isServerConnected) {
+        await checkServerConnection();
+      }
+    }, 30000); // 30초마다 확인
+    
+    // 페이지 로드 시 서버 연결 상태 확인
+    checkServerConnection().then(isConnected => {
+      if (!isConnected) {
+        addMessage('서버에 연결할 수 없습니다. 오프라인 모드로 전환되었습니다.', 'assistant');
+      }
+    });
+  });
+</script> 

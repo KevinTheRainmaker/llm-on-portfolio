@@ -13,4 +13,16 @@ export default defineConfig({
     integrations: [react(), tailwind(), sitemap()],
     site: template.website_url,
     base: template.base,
+    vite: {
+        server: {
+            hmr: {
+                timeout: 10000,
+                overlay: false,
+            },
+            watch: {
+                usePolling: true,
+                interval: 1000,
+            },
+        },
+    },
 });

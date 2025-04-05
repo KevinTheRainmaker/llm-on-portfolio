@@ -5,48 +5,67 @@ import SocialIcons from './SocialIcons.astro'
 import ProfilePictures from '@/assets/profile_pictures.jpg'
 import { getCollection } from 'astro:content'
 import { template } from '@/settings'
+import ChatUI from '../ChatUI.astro'
 
 const isBlogPopulated = await getCollection('blog').then(collection => collection.length > 0)
 
 const {fullName, title} = profile
 ---
 <aside
-	class='px-4 pt-4 h-screen w-[20rem] bg-base-200 text-base-content flex flex-col'
+	class='px-4 pt-4 h-screen w-[28rem] bg-base-200 text-base-content flex flex-col overflow-hidden'
 >
-	<div class='flex flex-col my-8 justify-between h-full'>
-		<div>
+	<div class='flex flex-col h-full'>
+		<div class='flex flex-col flex-shrink-0'>
 			<div class='flex justify-center items-center flex-col'>
 				<Image
 					class='mask mask-circle size-44'
 					src={ProfilePictures}
 					alt={`Profile picture of ${fullName}`}
 				/>
-				<h1 class="text-lg font-black mt-8 hidden lg:block">{title} <span>{fullName}</span></h1>
-			</div>
-			<div class='mx-4 mt-16'>
-				<ul class='space-y-4 menu grow shrink menu-md overflow-y-auto'>
-					<li>
-                        <a href=`${template.base}/` class='text-lg'>Home</a>
-					</li>
-					<li>
-                        <a href=`${template.base}/research` class='text-lg'>Research</a>
-					</li>
-					<li>
-                        <a href=`${template.base}/papers` class='text-lg'>Papers</a>
-					</li>
-					<li>
-                        <a href=`${template.base}/cv` class='text-lg'>CV</a>
-                    </li>
-                    {isBlogPopulated &&
-					<li>
-                        <a href=`${template.base}/blog/1` class='text-lg'>Blog</a>
-</li>
-                    }
-				</ul>
+				<div class='mx-4 mt-8 w-full'>
+					<ChatUI />
+				</div>
 			</div>
 		</div>
-		<div class='mx-4'>
+		
+		<div class='mx-4 mt-8 flex-1 overflow-y-auto'>
+			<ul class='space-y-4 menu menu-md'>
+				<li>
+                    <a href=`${template.base}/` class='text-lg'>Home</a>
+				</li>
+				<li>
+                    <a href=`${template.base}/research` class='text-lg'>Research</a>
+				</li>
+				<li>
+                    <a href=`${template.base}/papers` class='text-lg'>Papers</a>
+				</li>
+				<li>
+                    <a href=`${template.base}/cv` class='text-lg'>CV</a>
+                </li>
+                {isBlogPopulated &&
+				<li>
+                    <a href=`${template.base}/blog/1` class='text-lg'>Blog</a>
+                </li>
+                }
+			</ul>
+		</div>
+		
+		<div class='mx-4 mt-4 flex-shrink-0'>
 			<SocialIcons/>
 		</div>
 	</div>
 </aside>
+
+<style>
+  @media (max-width: 1024px) {
+    aside {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+  
+  /* 채팅 UI가 접혔을 때 메뉴 항목들의 상단 여백 조정 */
+  .chat-container.collapsed + div {
+    margin-top: 1rem;
+  }
+</style>
