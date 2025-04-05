@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export const prerender = false;
 
 // Gemini API 키는 환경 변수에서 가져옵니다
-const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || '';
+const API_KEY = import.meta.env.GEMINI_API_KEY || '';
 
 // Gemini API 초기화
 const genAI = new GoogleGenerativeAI(API_KEY);
