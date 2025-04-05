@@ -65,7 +65,7 @@ const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
     transition: all 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
-    height: 500px; /* 이전 값으로 복원 */
+    height: 350px; /* 이전 값으로 복원 */
     border: 1px solid var(--border-color, hsl(var(--b3)));
     border-radius: 0.5rem;
     overflow: hidden;
@@ -420,7 +420,7 @@ const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
       const isMobile = window.innerWidth <= 1024;
       
       // 초기 상태 설정
-      if (isMobile || isChatCollapsed) {
+      if (isMobile) {
         console.log('채팅 UI 접기 적용 중...');
         chatContent.classList.add('collapsed');
         chatContainer.classList.add('collapsed');
