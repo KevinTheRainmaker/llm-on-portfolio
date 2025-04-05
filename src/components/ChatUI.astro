@@ -220,7 +220,8 @@ const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
       initialized: false,
       history: [],
       isServerConnected: true,
-      reconnectAttempts: 0
+      reconnectAttempts: 0,
+      sessionId: null // 세션 ID 추가
     };
   }
   
@@ -249,37 +250,64 @@ const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
     const maxReconnectAttempts = 5;
     const reconnectDelay = 3000; // 3초
     
-    // 로컬 스토리지에서 채팅 기록 불러오기
-    try {
-      const savedChatHistory = localStorage.getItem('chatHistory');
-      if (savedChatHistory) {
-        chatHistory = JSON.parse(savedChatHistory);
-        window.chatState.history = chatHistory;
-        
-        // 메시지 콘텐츠가 이미 존재하는지 확인
-        if (chatMessages.children.length <= 1) { // 웰컴 메시지만 있는 경우
-          console.log('저장된 채팅 기록 복원 중...', chatHistory.length, '개의 메시지');
+    // 세션 관리
+    const currentSessionId = Date.now().toString();
+    const previousSessionId = localStorage.getItem('chatSessionId');
+    
+    // 새 세션 시작 여부 확인
+    const isNewSession = !previousSessionId || previousSessionId !== window.chatState.sessionId;
+    
+    // 새 세션이면 채팅 기록 초기화
+    if (isNewSession) {
+      console.log('새 세션 시작. 채팅 기록 초기화...');
+      localStorage.setItem('chatSessionId', currentSessionId);
+      window.chatState.sessionId = currentSessionId;
+      
+      // 채팅 기록 초기화
+      chatHistory = [];
+      window.chatState.history = [];
+      localStorage.removeItem('chatHistory');
+      
+      // 채팅 메시지 영역 초기화
+      chatMessages.innerHTML = '';
+      
+      // 웰컴 메시지 추가
+      addMessage('Hello! My name is Kangbeen Ko.<br>Ask anything about me!', 'assistant');
+    } else {
+      console.log('기존 세션 계속...');
+      
+      // 로컬 스토리지에서 채팅 기록 불러오기
+      try {
+        const savedChatHistory = localStorage.getItem('chatHistory');
+        if (savedChatHistory) {
+          chatHistory = JSON.parse(savedChatHistory);
+          window.chatState.history = chatHistory;
           
-          // 채팅 메시지 영역 초기화 (웰컴 메시지 포함)
-          chatMessages.innerHTML = '';
-          
-          // 웰컴 메시지 추가
-          addMessage('Hello! My name is Kangbeen Ko.<br>Ask anything about me!', 'assistant');
-          
-          // 이전 대화 내역 복원
-          chatHistory.forEach(message => {
-            if (message.role === 'user' || message.role === 'model') {
-              const role = message.role === 'model' ? 'assistant' : 'user';
-              const text = message.parts[0].text;
-              addMessage(text, role);
-            }
-          });
-        } else {
-          console.log('채팅 메시지가 이미 존재함. 복원 건너뜀.');
+          // 메시지 콘텐츠가 이미 존재하는지 확인
+          if (chatMessages.children.length <= 1) { // 웰컴 메시지만 있는 경우
+            console.log('저장된 채팅 기록 복원 중...', chatHistory.length, '개의 메시지');
+            
+            // 채팅 메시지 영역 초기화 (웰컴 메시지 포함)
+            chatMessages.innerHTML = '';
+            
+            // 웰컴 메시지 추가
+            addMessage('Hello! My name is Kangbeen Ko.<br>Ask anything about me!', 'assistant');
+            
+            // 이전 대화 내역 복원
+            chatHistory.forEach(message => {
+              if (message.role === 'user' || message.role === 'model') {
+                const role = message.role === 'model' ? 'assistant' : 'user';
+                const text = message.parts[0].text;
+                addMessage(text, role);
+              }
+            });
+          } else {
+            console.log('채팅 메시지가 이미 존재함. 복원 건너뜀.');
+          }
         }
+      } catch (error) {
+        console.error('채팅 기록 불러오기 실패:', error);
       }
-    } catch (error) {
-      console.error('채팅 기록 불러오기 실패:', error);
     }
     
     // WebSocket 연결 오류 처리
