@@ -87,7 +87,7 @@ const {
 	</body>
 </html>
 
-<style>
+<style is:global>
 	@media (prefers-color-scheme: dark) {
 		:root {
 			--my-color: #252b30;
@@ -99,4 +99,15 @@ const {
 		width: 100%;
 		height: 100%;
 	}
+	
+	/* 채팅 메시지 애니메이션 */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes typing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-0.5rem); }
+  }
 </style>
