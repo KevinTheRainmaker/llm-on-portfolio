@@ -15,9 +15,7 @@ export default defineConfig({
     site: template.website_url,
     base: template.base,
     output: "server",
-    adapter: vercel({
-      includeFiles: ['./public/pdfs/**/*']
-    }),
+    adapter: vercel({}),
     vite: {
         server: {
             hmr: {
