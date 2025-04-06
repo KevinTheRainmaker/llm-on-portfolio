@@ -16,8 +16,7 @@ export default defineConfig({
     base: template.base,
     output: "server",
     adapter: vercel({
-      includeFiles: ['./public/pdfs/**/*'],
-      webAnalytics: { enabled: true }
+      includeFiles: ['./public/pdfs/**/*']
     }),
     vite: {
         server: {
