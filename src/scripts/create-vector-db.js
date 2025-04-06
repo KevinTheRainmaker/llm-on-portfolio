@@ -4,6 +4,8 @@ import path from 'path';
 import * as cheerio from 'cheerio';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+// PDF 파싱을 위한 라이브러리 - 설치 필요: npm install pdf-parse
+import pdfParse from 'pdf-parse';
 
 dotenv.config();
 
@@ -88,6 +90,7 @@ const contentTypes = {
   publications: { namespace: 'publications', description: 'Research publications' },
   experience: { namespace: 'experience', description: 'Work experience' },
   skills: { namespace: 'skills', description: 'Skills and research interests' },
+  pdf: { namespace: 'pdf', description: 'PDF document content' }, // PDF 콘텐츠용 타입 추가
 };
 
 // HTML 파일에서 텍스트 추출
@@ -393,6 +396,77 @@ async function ensurePineconeIndex() {
   }
 }
 
+// PDF 파일에서 텍스트 추출
+async function extractTextFromPDF(filePath) {
+  try {
+    const dataBuffer = fs.readFileSync(filePath);
+    const result = await pdfParse(dataBuffer);
+    
+    // PDF 메타데이터 추출
+    const info = result.info || {};
+    const metadata = {
+      source: filePath,
+      title: info.Title || path.basename(filePath, '.pdf'),
+      author: info.Author || 'Unknown',
+      contentType: contentTypes.pdf.namespace,
+      description: 'Content extracted from PDF document',
+      creationDate: info.CreationDate || null,
+      pageCount: result.numpages || 0,
+    };
+    
+    return {
+      text: result.text,
+      metadata
+    };
+  } catch (error) {
+    console.error(`PDF 파싱 오류 (${filePath}):`, error.message);
+    return {
+      text: '',
+      metadata: {
+        source: filePath,
+        contentType: contentTypes.pdf.namespace,
+        description: 'Failed to extract PDF content',
+        error: error.message
+      }
+    };
+  }
+}
+
+// PDF 파일 검색 및 처리
+async function processPDFFiles(pdfDir) {
+  const results = [];
+  
+  // PDF 디렉토리가 없는 경우
+  if (!fs.existsSync(pdfDir)) {
+    console.log(`PDF 디렉토리 '${pdfDir}'를 찾을 수 없습니다.`);
+    return results;
+  }
+  
+  // PDF 디렉토리 스캔
+  function scanDirectory(directory) {
+    try {
+      const entries = fs.readdirSync(directory, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(directory, entry.name);
+        
+        if (entry.isDirectory()) {
+          // 재귀적으로 하위 디렉토리 스캔
+          scanDirectory(fullPath);
+        } else if (entry.name.toLowerCase().endsWith('.pdf')) {
+          // PDF 파일 처리 예약
+          results.push(fullPath);
+        }
+      }
+    } catch (error) {
+      console.error(`디렉토리 스캔 오류 (${directory}):`, error.message);
+    }
+  }
+  
+  scanDirectory(pdfDir);
+  return results;
+}
+
 // 메인 함수
 async function main() {
   console.log('KB 프로필 벡터 DB 생성을 시작합니다...');
@@ -406,8 +480,7 @@ async function main() {
     console.log(`${htmlFiles.length}개의 HTML 파일을 찾았습니다.`);
     
     if (htmlFiles.length === 0) {
-      console.log('처리할 파일이 없습니다. npm run build를 실행하여 HTML 파일을 생성하세요.');
-      return;
+      console.log('처리할 HTML 파일이 없습니다. npm run build를 실행하여 HTML 파일을 생성하세요.');
     }
     
     // 3. HTML 파일에서 텍스트 추출
@@ -416,9 +489,9 @@ async function main() {
       try {
         const content = await extractContentFromHTML(file);
         htmlContents.push(content);
-        console.log(`파일 처리 완료: ${file}`);
+        console.log(`HTML 파일 처리 완료: ${file}`);
       } catch (error) {
-        console.error(`파일 처리 오류 (${file}):`, error);
+        console.error(`HTML 파일 처리 오류 (${file}):`, error);
       }
     }
     
@@ -426,14 +499,35 @@ async function main() {
     const dataContents = await extractInfoFromDataFiles();
     console.log(`${dataContents.length}개의 데이터 파일 정보를 추출했습니다.`);
     
-    // 5. 모든 콘텐츠 합치기
-    const allContents = [...htmlContents, ...dataContents];
+    // 5. PDF 파일 찾기 및 처리
+    const pdfDir = path.join(process.cwd(), 'public', 'pdfs');
+    const pdfFiles = await processPDFFiles(pdfDir);
+    console.log(`${pdfFiles.length}개의 PDF 파일을 찾았습니다.`);
     
-    // 6. 문서 분할하기
+    // 6. PDF 파일에서 텍스트 추출
+    const pdfContents = [];
+    for (const file of pdfFiles) {
+      try {
+        const content = await extractTextFromPDF(file);
+        if (content.text.trim()) {
+          pdfContents.push(content);
+          console.log(`PDF 파일 처리 완료: ${file}`);
+        } else {
+          console.warn(`PDF 파일에서 텍스트를 추출할 수 없습니다: ${file}`);
+        }
+      } catch (error) {
+        console.error(`PDF 파일 처리 오류 (${file}):`, error);
+      }
+    }
+    
+    // 7. 모든 콘텐츠 합치기
+    const allContents = [...htmlContents, ...dataContents, ...pdfContents];
+    
+    // 8. 문서 분할하기
     const splitDocs = await splitDocuments(allContents);
     console.log(`${splitDocs.length}개의 청크로 분할했습니다.`);
     
-    // 7. 임베딩 생성 및 Pinecone에 업로드
+    // 9. 임베딩 생성 및 Pinecone에 업로드
     const batchSize = 10; // 더 작은 배치 크기로 조정
     for (let i = 0; i < splitDocs.length; i += batchSize) {
       try {
