@@ -1,5 +1,6 @@
 ---
 import { ClientRouter } from 'astro:transitions';
+import SpeedInsights from "@vercel/speed-insights/astro";
 
 import BetterIcon from '../components/ui/BetterIcon.astro'
 import DarkLightController from '../components/ui/DarkLightController.astro'
@@ -84,6 +85,9 @@ const {
 				<Navbar />
 			</div>
 		</div>
+		
+		<!-- Vercel Speed Insights -->
+		<SpeedInsights />
 	</body>
 </html>
 
