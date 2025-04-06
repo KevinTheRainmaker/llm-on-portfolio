@@ -84,13 +84,6 @@ export const education = [
 	  description: 'Conducted research on telemedicine methods for CKD with nephrologists at SNUBH; led to first-author publication.',
 	},
 	{
-	  company: 'KAIST Statistical Artificial Intelligence Lab.',
-	  time: 'Jan. 2024 – Feb. 2024',
-	  title: 'Undergraduate Research Intern',
-	  location: '',
-	  description: '',
-	},
-	{
 	  company: 'Google Developer Student Clubs (GDSC GIST)',
 	  time: 'Sep. 2021 – Sep. 2023',
 	  title: '1st Core Member & 2nd AI Mentor',

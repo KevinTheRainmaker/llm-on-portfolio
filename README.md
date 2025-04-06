@@ -1,102 +1,84 @@
-# Astro Academia Documentation
+# Astro Academia - 프로필 벡터 DB 구축
 
-## What is Astro Academia?
+이 프로젝트는 Astro로 만든 아카데믹 프로필 웹사이트와 Pinecone 벡터 DB를 연동하여 지능형 챗봇을 구현합니다.
 
-Astro Academia is a personal academic website built using Astro, a modern static site generator. The website is designed to showcase academic achievements, research papers, blog posts, and a CV. It is fast, responsive, and easy to maintain, making it an ideal platform for academics and researchers to present their work.
+## 주요 기능
 
-If you find Astro Academia useful or appreciate my work, consider supporting me! Your support helps keep this project maintained and encourages further development. 🚀✨
+- 개인 프로필 정보를 Pinecone 벡터 DB로 변환
+- Gemini API를 활용한 RAG 기반 대화형 챗봇
+- 사용자 질문에 프로필 데이터 기반으로 응답
 
-<a href="https://buymeacoffee.com/maiobarbero" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-yellow.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+## 설치 방법
 
-## How to use it
+1. 필요한 패키지 설치:
 
-Fork this repository to create your new website starting from this template.
-
-## How to Create a CV Using the `cv.ts` File
-
-The `cv.ts` file located in the `src/data/` directory is used to define the structure and content of your CV. This file exports an object containing various sections of your CV, such as education, experience, publications, and more.
-
-### Example Structure of `cv.ts`
-
-```typescript
-export const cv = {
-  education: [
-    {
-      degree: "Ph.D. in Computer Science",
-      institution: "University of Example",
-      year: "2020",
-    },
-    {
-      degree: "M.Sc. in Computer Science",
-      institution: "University of Example",
-      year: "2016",
-    },
-  ],
-  experience: [
-    {
-      title: "Research Scientist",
-      company: "Example Research Lab",
-      year: "2021-Present",
-    },
-    {
-      title: "Software Engineer",
-      company: "Tech Company",
-      year: "2016-2021",
-    },
-  ],
-  // Add more sections as needed
-};
+```bash
+npm install @pinecone-database/pinecone @google/generative-ai cheerio dotenv
 ```
 
-To create or update your CV, modify the `cv.ts` file with your personal information and achievements. The CV will be automatically rendered on the CV page of your website.
+2. 환경 변수 설정:
 
-## How to Use the `settings.ts` File
+`.env.example` 파일을 복사하여 `.env` 파일을 생성하고 API 키를 설정합니다.
 
-The `settings.ts` file located in the `src/` directory is used to configure various settings for your Astro Academia website. This file exports an object containing settings such as site title, description, social media links, and more.
+```
+# Pinecone 설정
+PINECONE_API_KEY=your-pinecone-api-key
+PINECONE_INDEX_NAME=kb-profile-data
 
-### Example Structure of `settings.ts`
-
-```typescript
-export const settings = {
-  siteTitle: "Astro Academia",
-  siteDescription: "A personal academic website built with Astro.",
-  socialLinks: {
-    twitter: "https://twitter.com/yourusername",
-    github: "https://github.com/yourusername",
-    linkedin: "https://linkedin.com/in/yourusername",
-  },
-  // Add more settings as needed
-};
+# Google AI 설정 (Gemini API)
+PUBLIC_GEMINI_API_KEY=your-gemini-api-key
 ```
 
-To customize your website settings, modify the `settings.ts` file with your desired values. These settings will be used throughout your website to display the appropriate information.
+## 벡터 DB 생성 방법
 
-## Where to Find the Blog Collection and Where to Add New Blog Posts
+1. 웹사이트 빌드:
 
-The blog collection is located in the `src/content/BlogPosts/` directory. Each blog post is a Markdown file with a `.md` extension. The blog posts are named sequentially (e.g., `post1.md`, `post2.md`, etc.).
-
-### Adding a New Blog Post
-
-1. Navigate to the `src/content/BlogPosts/` directory.
-2. Create a new Markdown file for your blog post (e.g., `post1.md`).
-3. Add the content of your blog post using Markdown syntax. Include frontmatter at the top of the file to define metadata such as title, date, and tags.
-
-### Example Blog Post (`post11.md`)
-
-```markdown
----
-title: "New Blog Post"
-date: "2023-10-01"
-tags: ["research", "astro"]
-excerpt: "Some short paragraphs"
----
-
-# New Blog Post
-
-This is the content of the new blog post. Write your article here using Markdown syntax.
+```bash
+npm run build
 ```
 
-Once you have added the new blog post, it will be automatically included in the blog collection and displayed on the blog page of your website.
+2. 벡터 DB 생성 스크립트 실행:
 
-## Deploy
-The template provides a workflow to deploy the website on Github pages as a static website.
+```bash
+node src/scripts/create-vector-db.js
+```
+
+이 스크립트는 다음과 같은 작업을 수행합니다:
+
+- 빌드된 HTML 파일과 데이터 파일에서 프로필 정보 추출
+- 추출된 데이터를 적절한 크기로 분할
+- Gemini API의 임베딩 모델로 벡터화
+- Pinecone에 벡터 데이터 저장
+
+## 사용 방법
+
+1. 서버 실행:
+
+```bash
+npm run dev
+```
+
+2. 웹사이트 방문:
+   브라우저에서 `http://localhost:4321`에 접속하면 채팅 UI가 표시됩니다.
+
+3. 대화 방식:
+   채팅창에 질문을 입력하면 벡터 DB에서 관련 정보를 검색하여 답변을 제공합니다.
+
+## 작동 원리
+
+1. **데이터 추출**: HTML 파일과 데이터 파일(cv.ts, settings.ts)에서 프로필 정보 추출
+2. **벡터화**: Gemini의 임베딩 모델(embedding-001)을 사용하여 텍스트를 벡터로 변환
+3. **검색**: 사용자 질문이 들어오면 벡터 유사도 검색으로 관련 정보 검색
+4. **응답 생성**: 검색된 정보와 대화 기록을 바탕으로 Gemini 모델이 응답 생성
+
+## 주의사항
+
+- Pinecone과 Google AI API 키가 필요합니다.
+- 초기 벡터 DB 생성에는 수분이 소요될 수 있습니다.
+- Gemini API는 요청 속도 제한이 있으므로, 대량의 데이터 처리 시 지연이 추가됩니다.
+- 대규모 사이트의 경우 청크 크기와 오버랩 설정을 조정해야 할 수 있습니다.
+
+## 커스터마이징
+
+- `src/scripts/create-vector-db.js`: 벡터 DB 생성 로직 커스터마이징
+- `src/pages/api/chat.ts`: 응답 생성 로직 커스터마이징
