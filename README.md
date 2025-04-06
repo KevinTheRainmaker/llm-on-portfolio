@@ -82,3 +82,107 @@ npm run dev
 
 - `src/scripts/create-vector-db.js`: 벡터 DB 생성 로직 커스터마이징
 - `src/pages/api/chat.ts`: 응답 생성 로직 커스터마이징
+
+## PDF 문서 처리 추가
+
+프로젝트에 PDF 문서 처리 기능이 추가되었습니다. 이제 RAG 챗봇이 PDF 파일의 내용을 기반으로 질문에 답변할 수 있습니다.
+
+### PDF 문서 추가 방법
+
+1. `public/pdfs` 디렉토리에 PDF 파일을 추가합니다:
+   ```bash
+   cp 논문.pdf 이력서.pdf public/pdfs/
+   ```
+
+2. 벡터 데이터베이스를 다시 생성합니다:
+   ```bash
+   node src/scripts/create-vector-db.js
+   ```
+
+3. 서버를 시작합니다:
+   ```bash
+   npm run dev
+   ```
+
+4. 이제 챗봇에 PDF 문서 내용에 관한 질문을 할 수 있습니다.
+
+### 필요한 패키지
+
+PDF 처리를 위해 다음 패키지를 설치해야 합니다:
+```bash
+npm install pdf-parse
+```
+
+## Langfuse 로깅 기능 추가
+
+RAG 챗봇의 모든 인터랙션과 성능을 추적하기 위한 Langfuse 로깅 기능이 추가되었습니다.
+
+### 설정 방법
+
+1. [Langfuse](https://langfuse.com) 계정을 생성하고 API 키를 발급받습니다.
+   
+2. `.env` 파일에 Langfuse API 키를 추가합니다:
+   ```
+   LANGFUSE_PUBLIC_KEY=your-langfuse-public-key
+   LANGFUSE_SECRET_KEY=your-langfuse-secret-key
+   LANGFUSE_HOST=https://cloud.langfuse.com
+   ```
+
+3. 서버를 시작하면 자동으로 다음과 같은 데이터가 Langfuse에 로깅됩니다:
+   - 사용자 질문 및 세션 정보
+   - 벡터 검색 쿼리 및 결과
+   - 참조된 데이터 소스 정보
+   - LLM 생성 내용 (프롬프트 및 응답)
+   - 오류 및 예외 상황
+
+4. Langfuse 대시보드에서 로깅된 데이터를 확인하고 분석할 수 있습니다.
+
+자세한 내용은 [Langfuse 문서](https://langfuse.com/docs)를 참조하세요.
+
+## Vercel 배포 방법
+
+이 프로젝트는 Vercel에 배포할 수 있도록 구성되어 있습니다.
+
+### 배포 준비
+
+1. [Vercel](https://vercel.com/) 계정을 생성하고 GitHub 저장소와 연결합니다.
+
+2. 다음 환경 변수를 Vercel 프로젝트 설정에 추가합니다:
+   - `PINECONE_API_KEY`: Pinecone API 키
+   - `PINECONE_INDEX_NAME`: Pinecone 인덱스 이름 (기본값: `kb-profile-data`)
+   - `GEMINI_API_KEY`: Google Gemini API 키
+   - `LANGFUSE_PUBLIC_KEY` (선택): Langfuse 공개 키
+   - `LANGFUSE_SECRET_KEY` (선택): Langfuse 비밀 키
+   - `LANGFUSE_HOST` (선택): Langfuse 호스트 URL
+
+3. 다음 명령어로 로컬에서 빌드를 테스트합니다:
+   ```bash
+   npm run build
+   ```
+
+### 배포 방법
+
+1. GitHub 저장소에 변경사항을 커밋하고 푸시합니다.
+   ```bash
+   git add .
+   git commit -m "Deploy to Vercel"
+   git push
+   ```
+
+2. Vercel 대시보드에서 자동으로 배포가 시작되는지 확인합니다.
+
+3. 또는 Vercel CLI를 사용하여 배포합니다:
+   ```bash
+   npx vercel
+   ```
+
+### 배포 후 설정
+
+1. 웹사이트가 정상적으로 작동하는지 확인합니다.
+
+2. PDF 파일이 필요한 경우 Vercel 배포 후 `public/pdfs` 디렉토리에 파일을 업로드합니다.
+
+3. 벡터 데이터베이스를 구축하려면 로컬에서 다음 명령어를 실행한 후 다시 배포합니다:
+   ```bash
+   node src/scripts/create-vector-db.js
+   ```
