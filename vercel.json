@@ -1,10 +1,4 @@
 {
-  "functions": {
-    "./.vercel/output/functions/render.func/**": {
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  },
   "github": {
     "silent": true
   }
