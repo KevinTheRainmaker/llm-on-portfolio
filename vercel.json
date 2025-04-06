@@ -8,14 +8,6 @@
       "maxDuration": 60
     }
   },
-  "env": {
-    "PINECONE_API_KEY": "@pinecone_api_key",
-    "PINECONE_INDEX_NAME": "@pinecone_index_name",
-    "GEMINI_API_KEY": "@gemini_api_key",
-    "LANGFUSE_PUBLIC_KEY": "@langfuse_public_key",
-    "LANGFUSE_SECRET_KEY": "@langfuse_secret_key",
-    "LANGFUSE_HOST": "@langfuse_host"
-  },
   "github": {
     "silent": true
   }
