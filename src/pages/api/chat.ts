@@ -70,13 +70,14 @@ async function rewriteQueryWithHistory(query: string, history: any[], trace: any
 async function searchVectorDB(query: string, history: any[], trace: any) {
   const searchSpan = trace.span({ name: 'vector-search' });
   try {
-    const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
-    const planner = await getRetrievalPlan(rewrittenQuery);
+    const planner = await getRetrievalPlan(query);
 
     if (!planner.relevant) {
-      searchSpan.end({ input: rewrittenQuery, output: 'irrelevant' });
+      searchSpan.end({ input: query, output: 'irrelevant' });
       return [];
     }
+
+    const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
 
     // 쿼리 임베딩 생성
     const queryEmbedding = await embedText(rewrittenQuery);
