@@ -1,7 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Langfuse } from 'langfuse';
 
 const genAI = new GoogleGenerativeAI(import.meta.env.GEMINI_API_KEY || '');
 const plannerModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+const langfuse = new Langfuse({
+  publicKey: import.meta.env.LANGFUSE_PUBLIC_KEY || '',
+  secretKey: import.meta.env.LANGFUSE_SECRET_KEY || '',
+  baseUrl: import.meta.env.LANGFUSE_HOST || 'https://cloud.langfuse.com'
+});
 
 export async function getRetrievalPlan(userQuestion: string): Promise<{
   relevant: boolean;
@@ -27,8 +34,12 @@ export async function getRetrievalPlan(userQuestion: string): Promise<{
 
 질문: "${userQuestion}"
 `;
-
+  const trace = langfuse.trace({ name: 'retrieval-planner' });
   const result = await plannerModel.generateContent(prompt);
+  trace.span({ name: 'retrieval-planner' }).end({
+    input: { userQuestion },
+    output: result.response.text(),
+  });
   try {
     return JSON.parse(result.response.text());
   } catch {
