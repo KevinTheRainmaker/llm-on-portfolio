@@ -9,7 +9,7 @@ export const prerender = false;
 
 // 환경 변수 설정
 const PINECONE_API_KEY = import.meta.env.PINECONE_API_KEY || '';
-const PINECONE_INDEX_NAME = import.meta.env.PINECONE_INDEX_NAME || 'kangbeen-context-profile-data';
+const PINECONE_INDEX_NAME = import.meta.env.PINECONE_INDEX_NAME || 'kangbeen-context-profile-data'; // must be set on vercel env
 const GEMINI_API_KEY = import.meta.env.GEMINI_API_KEY || '';
 
 // Pinecone 클라이언트 초기화
