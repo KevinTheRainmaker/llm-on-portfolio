@@ -9,9 +9,9 @@ interface Props {
 
 const { elements } = Astro.props
 ---
-<ul class='space-y-6'>
+<ul class='space-y-2'>
   {elements.map((element, index) => (
-    <li class='group bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-sm transition-shadow duration-200'>
+    <li class='group rounded-2xl p-4 hover:shadow-sm transition-shadow duration-200'>
       { isSkill(element)
         ?
         <h3 class='text-lg font-bold mb-2'>{element.title}</h3>
@@ -35,9 +35,6 @@ const { elements } = Astro.props
           <span class='italic'>{element.journal}</span> •{' '}
           {element.time}
         </p>
-        {element.abstract && (
-          <p class='text-gray-600 dark:text-gray-400'>{element.abstract}</p>
-        )}
       </div>
     }
     </li>

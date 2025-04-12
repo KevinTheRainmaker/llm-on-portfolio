@@ -12,19 +12,20 @@ const {fullName, title, institute, profilePicture} = Astro.props
   </h1>
   <p class='text-xl text-gray-600 mb-4'>{title}{institute ? ` at ${institute}` : ''}</p>
   <p class='text-lg mb-6'>
-    An AI × HCI researcher and product-minded builder, passionate about creating technologies that meaningfully improve human life.
+    I'm an <span class="font-bold">AI × HCI researcher</span> and <span class="font-bold">product-minded builder</span>, passionate about creating technologies that meaningfully improve human life.
     <br>
-    I value responsibility, embrace challenges, and strive to move humanity forward through thoughtful innovation.
+    <br>
+    I value <span class="font-bold">responsibility</span>, embrace <span class="font-bold">challenges</span>, and strive to <span class="font-bold">move humanity forward</span> through thoughtful innovation.
   </p>
   <div class='flex gap-4'>
     <SocialIcons />
   </div>
 </div>
-<div class='size-72 lg:block hidden'>
+<div class='size-72 lg:block hidden flex items-center justify-center'>
   <!-- Add your profile image -->
   <Image
     src={profilePicture}
     alt={fullName}
-    class='w-full h-full mask mask-circle size-44'
+    class='w-full h-full object-cover object-center mask mask-circle'
   />
 </div>

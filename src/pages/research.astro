@@ -14,7 +14,7 @@ const { research_areas } = profile;
 
     <div class="mb-12">
       <p class="text-lg mb-6">
-        My research focuses on human-computer interaction (HCI) and AI technologies that enhance human capabilities.
+        My research focuses on <span class="text-accent font-bold">human-computer interaction (HCI)</span> and <span class="text-accent font-bold">AI technologies</span> that enhance human capabilities.
         Through user-centered design and interdisciplinary approaches, I aim to create intelligent systems that
         seamlessly integrate into our daily lives and provide meaningful assistance.
       </p>
@@ -24,19 +24,16 @@ const { research_areas } = profile;
     <div class="grid gap-8 mb-12">
       {
         research_areas.map((area) => (
-          <div class="flex gap-6 items-start">
+          <div class="flex gap-6 items-center">
             <BetterIcon>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
-                fill="none"
-                stroke-width="2"
-                class="size-6 stroke-accent"
+                fill="#00cea9"
+                class="size-6"
               >
                 <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d={RESEARCH_ICONS[area.field as keyof typeof RESEARCH_ICONS]?.path || RESEARCH_ICONS['computer-science'].path}
+                  d={RESEARCH_ICONS[area.field as keyof typeof RESEARCH_ICONS]?.path}
                 />
               </svg>
             </BetterIcon>
@@ -49,12 +46,12 @@ const { research_areas } = profile;
       }
     </div>
 
-    <List listTitle="Current Projects" listItems={[
+    <!-- <List listTitle="Current Projects" listItems={[
       {
         title: "Share your OOTD",
         description: "Share and keep track of your OOTDs with ease—our AI puts together a gorgeous catalog just for you."
       }
-    ]} />
+    ]} /> -->
 
   </div>
 </Layout>

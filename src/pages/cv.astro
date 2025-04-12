@@ -1,11 +1,13 @@
 ---
 import Layout from '@/layouts/Layout.astro'
-import { experiences, education, skills, publications } from '../data/cv'
+import { experiences, education, skills, publications, projects, awards, otherExperiences } from '../data/cv'
 import CvTimeline from '@/components/ui/CvTimeline.astro'
 
 import type { Experience, Education, Publication } from '../types/cv'
 import List from '@/components/ui/List.astro'
 import PublicationsList from '@/components/ui/PublicationsList.astro'
+import ProjectCard from '@/components/ui/ProjectCard.astro'
+import TextListItem from '@/components/ui/TextListItem.astro'
 
 let orderdExperiences: Experience[] = []
 let orderdEducations: Education[] = []
@@ -69,20 +71,56 @@ if (publications.length > 0) {
 	}
 
 	{
-		orderdEducations.length > 0 && (
+		projects.length > 0 && (
 			<section class='mb-12'>
 				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
-					Last publications
+					Projects
 				</h2>
-				<PublicationsList elements={orderedPublications}/>
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					{projects.map(project => (
+						<ProjectCard project={project} />
+					))}
+				</div>
 			</section>
 		)
 	}
 
 	{
+		awards.length > 0 && (
+			<section class='mb-12'>
+				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
+					Awards & Honors
+				</h2>
+				<div class="mt-6">
+					{awards.map(award => (
+						<TextListItem item={award} />
+					))}
+				</div>
+			</section>
+		)
+	}
+
+	{
+		otherExperiences.length > 0 && (
+			<section class='mb-12'>
+				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
+					Other Experiences
+				</h2>
+				<div class="mt-6">
+					{otherExperiences.map(exp => (
+						<TextListItem item={exp} />
+					))}
+				</div>
+			</section>
+		)
+	}
+	{
 		skills.length > 0 && (
 			<section class='mb-12'>
-				<List listTitle='Skills' listItems={skills}/>
+				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
+					Skills
+				</h2>
+				<List listItems={skills}/>
 			</section>
 		)
 	}

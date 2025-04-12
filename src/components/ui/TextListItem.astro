@@ -1,0 +1,25 @@
+---
+interface Props {
+  item: {
+    title: string;
+    organization?: string;
+    time: string;
+    description: string;
+  };
+}
+
+const { item } = Astro.props;
+---
+
+<div class="mb-4 pb-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{item.title}</h3>
+    <span class="text-sm text-gray-500 dark:text-gray-400 mt-1 sm:mt-0">{item.time}</span>
+  </div>
+  
+  {item.organization && (
+    <p class="text-sm text-accent font-medium mb-2">{item.organization}</p>
+  )}
+  
+  <p class="text-gray-700 dark:text-gray-300 text-sm">{item.description}</p>
+</div> 

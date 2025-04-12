@@ -4,9 +4,9 @@ export const profile = {
 	institute: 'Gwangju Institute of Science and Technology',
 	author_name: 'Ko, K.', // Author name to be highlighted in the papers section
 	research_areas: [
-		{ title: 'Human-Agent Interaction', description: 'Developing intelligent agents that adapt to user context and provide personalized assistance', field: 'computer-science' },
-		{ title: 'Context-aware AI', description: 'Creating AI systems that understand and respond to environmental and user contexts', field: 'artificial-intelligence' },
-		{ title: 'LLM-integrated Systems', description: 'Integrating large language models into everyday applications for enhanced human capabilities', field: 'artificial-intelligence' },
+		{ title: 'Human-Agent Interaction', description: 'Developing intelligent agents that adapt to user context and provide personalized assistance', field: 'human-agent-interaction' },
+		{ title: 'Context-aware AI', description: 'Creating AI systems that understand and respond to environmental and user contexts', field: 'context-aware-ai' },
+		{ title: 'LLM-integrated Systems', description: 'Integrating large language models into everyday applications for enhanced human capabilities', field: 'llm-integrated' },
 	],
 }
 

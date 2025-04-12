@@ -3,6 +3,8 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Langfuse } from 'langfuse';
 import { getRetrievalPlan } from './retrieval-planner';
+import { publications } from '../../data/cv';
+import { RESEARCH_ICONS } from '../../data/researchIcons';
 
 // prerender 비활성화
 export const prerender = false;
@@ -147,9 +149,52 @@ async function searchVectorDB(query: string, history: any[], trace: any) {
   }
 }
 
+// 사이트맵 생성 함수
+function generateSiteMap() {
+  // 기본 페이지 정보
+  const pages = [
+    { path: '/', title: 'Home', description: '메인 페이지' },
+    { path: '/research', title: 'Research', description: '연구 분야 및 프로젝트' },
+    { path: '/papers', title: 'Papers', description: '논문 목록 및 상세 정보' },
+    { path: '/cv', title: 'CV', description: '이력서 및 학력 정보' },
+    { path: '/blog', title: 'Blog', description: '블로그 포스트' }
+  ];
+
+  // 논문 정보 추가
+  const papers = publications.map((paper: { title: string; journal: string; time: string; authors: string; highlight: boolean }) => ({
+    path: `/papers#${paper.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    title: paper.title,
+    description: `${paper.journal} (${paper.time})`,
+    authors: paper.authors,
+    highlight: paper.highlight
+  }));
+
+  // 연구 분야 정보 추가
+  const researchAreas = Object.entries(RESEARCH_ICONS).map(([key, value]: [string, { title: string }]) => ({
+    path: `/research#${key}`,
+    title: value.title,
+    description: '연구 분야 상세 정보'
+  }));
+
+  // 사이트맵 텍스트 생성
+  const baseMap = pages.map(page => `- ${page.title} (${page.path}): ${page.description}`).join('\n');
+  
+  const papersMap = papers.map(paper => 
+    `  - ${paper.title} (${paper.path})
+     저자: ${paper.authors}
+     출처: ${paper.description}
+     ${paper.highlight ? '(주요 논문)' : ''}`
+  ).join('\n');
+
+  const researchMap = researchAreas.map(area => 
+    `  - ${area.title} (${area.path}): ${area.description}`
+  ).join('\n');
+
+  return `${baseMap}\n\n### 논문 목록:\n${papersMap}\n\n### 연구 분야:\n${researchMap}`;
+}
+
 // 답변 생성 함수
 async function generateResponse(query: string, contexts: any[], chatHistory: any[], trace: any) {
-  // const llmSpan = trace.span({ name: 'llm-generation' });
   try {
     // 컨텍스트 정보 텍스트로 변환 (PDF 문서 특별 처리 추가)
     const contextText = contexts.map(ctx => {
@@ -164,10 +209,18 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
       return `${role}: ${msg.parts[0].text}`;
     }).join('\n');
     
+    // 동적 사이트맵 생성
+    const siteMap = `
+      ### Site Map:
+      ${generateSiteMap()}
+    `;
+    
     // 프롬프트 구성
     const prompt = `
       You are Kangbeen Ko(고강빈), responding based on the information provided on your personal profile page. Use the following context to answer the user's question.  
       Your responses should be **friendly and professional**, and provided in **the same language the user used**.
+
+      ${siteMap}
 
       ### Context Information:
       current time: ${new Date().toISOString()}
@@ -183,6 +236,11 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
       4. Respond in a friendly and professional tone, using the same language as the user.
       5. If more information or clarification is needed, guide the user to the relevant section or document.
       6. Keep your answer concise—no more than 500 characters.
+      7. After your main response, if relevant, add a reference to specific pages where users can find more information. For example:
+         - For paper-related questions: "더 자세한 내용은 Papers 탭의 [논문 제목]을 참고해주세요."
+         - For research-related questions: "연구 내용에 대해 더 알고 싶으시다면 Research 탭의 [연구 분야] 섹션을 방문해주세요."
+         - For project-related questions: "프로젝트에 대한 자세한 내용은 Projects 탭에서 확인하실 수 있습니다."
+      8. When referencing papers or research areas, use the exact titles and paths provided in the site map.
 
       ### User Question:
       ${query}
@@ -213,11 +271,9 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
       }
     });
     
-    // llmSpan.end({ output: responseText });
     return responseText;
   } catch (error) {
     console.error('응답 생성 오류:', error);
-    // llmSpan.end({ status: 'error', error: String(error) });
     return '죄송합니다. 응답을 생성하는 중에 오류가 발생했습니다. 다시 시도해주세요.';
   }
 }
