@@ -76,12 +76,18 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
 }> {
   const planSpan = trace.span({ name: 'plan-decision' });
   try {
-    const planner = await getRetrievalPlan(query);
+    const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
+    const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
+    const plannerPrompt = latestUser && latestBot
+      ? `${latestUser}\n${latestBot}\n${query}`
+      : query;
+
+    const planner = await getRetrievalPlan(plannerPrompt);
     planSpan.end({
-      input: query,
+      input: { query, latestUser, latestBot },
       output: planner,
     });
-    console.log(planner.relevant);
+    console.log(plannerPrompt);
     if (!planner.relevant) {
       planSpan.end({
         input: query,
