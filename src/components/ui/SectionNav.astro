@@ -1,0 +1,29 @@
+---
+interface Section {
+  id: string;
+  title: string;
+}
+
+interface Props {
+  sections: Section[];
+}
+
+const { sections } = Astro.props;
+---
+
+<div class="mb-8 p-4 bg-base-200 rounded-lg">
+  <div class="flex flex-wrap gap-2">
+    {sections.map(section => (
+      <a 
+        href={`#${section.id}`} 
+        class="px-3 py-1.5 text-sm rounded-full bg-base-100 hover:bg-accent hover:text-white transition-colors duration-200 flex items-center gap-1"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8.293 14.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L12 12.414l-2.293 2.293a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+          <path fill-rule="evenodd" d="M7.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L12 6.414l-3.293 3.293a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+        </svg>
+        {section.title}
+      </a>
+    ))}
+  </div>
+</div> 

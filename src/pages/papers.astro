@@ -5,32 +5,45 @@ import { highlightAuthor } from "@/lib/utils";
 import {template} from "@/settings";
 import HighlightPublication from "@/components/ui/HighlightPublication.astro";
 import PublicationsList from "@/components/ui/PublicationsList.astro";
+import SectionNav from '@/components/ui/SectionNav.astro';
 
 // 하이라이트된 논문과 일반 논문 분리
 const highlightedPublications = publications.filter(pub => pub.highlight);
 const regularPublications = publications.filter(pub => !pub.highlight);
+
+// 섹션 정의
+const sections = [
+  { id: "featured", title: "Featured Publications" },
+  { id: "all-publications", title: "Other Publications" }
+];
 ---
 
-<Layout title="Papers">
+<Layout title="Papers | Kangbeen Ko">
   <div class="prose max-w-none">
     <h1 class="text-3xl font-bold mb-8">Publications</h1>
     
+    <SectionNav sections={sections} />
+    
     {highlightedPublications.length > 0 && (
-      <div>
-        <h2 class="text-2xl font-bold mb-6">Featured Publications</h2>
+      <section id="featured" class="mb-12 scroll-mt-16">
+        <h2 class="text-2xl font-bold mb-6 border-b pb-2">
+          <a href="#featured" class="font-bold">Featured Publications</a>
+        </h2>
         <div class="grid gap-8 mb-12">
           {highlightedPublications.map((publication) => (
-            <HighlightPublication publication={publication} />
+            <HighlightPublication publication={publication} colored={true}/>
           ))}
         </div>
-      </div>
+      </section>
     )}
 
     {regularPublications.length > 0 && (
-      <div>
-        <h2 class="text-2xl font-bold mb-6">Other Publications</h2>
+      <section id="all-publications" class="mb-12 scroll-mt-16">
+        <h2 class="text-2xl font-bold mb-6 border-b pb-2">
+          <a href="#all-publications" class="font-bold">Other Publications</a>
+        </h2>
         <PublicationsList elements={regularPublications} />
-      </div>
+      </section>
     )}
   </div>
 </Layout>

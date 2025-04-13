@@ -8,6 +8,7 @@ import List from '@/components/ui/List.astro'
 import PublicationsList from '@/components/ui/PublicationsList.astro'
 import ProjectCard from '@/components/ui/ProjectCard.astro'
 import TextListItem from '@/components/ui/TextListItem.astro'
+import SectionNav from '@/components/ui/SectionNav.astro'
 
 let orderdExperiences: Experience[] = []
 let orderdEducations: Education[] = []
@@ -45,14 +46,26 @@ if (publications.length > 0) {
 		return orderElement(a, b)
 	})
 }
+
+// 섹션 정의
+const sections = [
+  { id: "education", title: "Education" },
+  { id: "experiences", title: "Experiences" },
+  { id: "projects", title: "Projects" },
+  { id: "awards", title: "Awards & Honors" },
+  { id: "other-experiences", title: "Other Experiences" },
+  { id: "skills", title: "Skills" }
+];
 ---
 
-<Layout>
+<Layout title="CV | Kangbeen Ko">
+	<SectionNav sections={sections} />
+	
 	{
 		orderdEducations.length > 0 && (
-			<section class='mb-12'>
+			<section id="education" class='mb-12 scroll-mt-16'>
 				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
-					Education
+					<a href="#education" class="hover:text-accent">Education</a>
 				</h2>
 				<CvTimeline elements={orderdEducations} colored={true} />
 			</section>
@@ -61,9 +74,9 @@ if (publications.length > 0) {
 
 	{
 		orderdExperiences.length > 0 && (
-			<section class='mb-12'>
+			<section id="experiences" class='mb-12 scroll-mt-16'>
 				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
-					Experiences
+					<a href="#experiences" class="hover:text-accent">Experiences</a>
 				</h2>
 				<CvTimeline elements={orderdExperiences} colored={true} />
 			</section>
@@ -72,9 +85,9 @@ if (publications.length > 0) {
 
 	{
 		projects.length > 0 && (
-			<section class='mb-12'>
+			<section id="projects" class='mb-12 scroll-mt-16'>
 				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
-					Projects
+					<a href="#projects" class="hover:text-accent">Projects</a>
 				</h2>
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					{projects.map(project => (
@@ -87,9 +100,9 @@ if (publications.length > 0) {
 
 	{
 		awards.length > 0 && (
-			<section class='mb-12'>
+			<section id="awards" class='mb-12 scroll-mt-16'>
 				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
-					Awards & Honors
+					<a href="#awards" class="hover:text-accent">Awards & Honors</a>
 				</h2>
 				<div class="mt-6">
 					{awards.map(award => (
@@ -102,9 +115,9 @@ if (publications.length > 0) {
 
 	{
 		otherExperiences.length > 0 && (
-			<section class='mb-12'>
+			<section id="other-experiences" class='mb-12 scroll-mt-16'>
 				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
-					Other Experiences
+					<a href="#other-experiences" class="hover:text-accent">Other Experiences</a>
 				</h2>
 				<div class="mt-6">
 					{otherExperiences.map(exp => (
@@ -116,9 +129,9 @@ if (publications.length > 0) {
 	}
 	{
 		skills.length > 0 && (
-			<section class='mb-12'>
+			<section id="skills" class='mb-12 scroll-mt-16'>
 				<h2 class='text-2xl font-bold mb-6 border-b pb-2'>
-					Skills
+					<a href="#skills" class="hover:text-accent">Skills</a>
 				</h2>
 				<List listItems={skills}/>
 			</section>
