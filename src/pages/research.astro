@@ -4,8 +4,15 @@ import { profile } from "@/settings";
 import BetterIcon from "@/components/ui/BetterIcon.astro";
 import List from "@/components/ui/List.astro";
 import {RESEARCH_ICONS} from "@/data/researchIcons";
+import SectionNav from '@/components/ui/SectionNav.astro';
 
 const { research_areas } = profile;
+
+// 섹션 정의
+const sections = [
+  { id: "overview", title: "Overview" },
+  { id: "research-areas", title: "Research Areas" }
+];
 ---
 
 <Layout title="Research | Kangbeen Ko">
