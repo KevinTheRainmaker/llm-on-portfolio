@@ -101,10 +101,9 @@ export const education = [
 		title: 'Research Intern',
 		location: 'Seoul, Korea',
 		description: `**Initial MVP development team for SickGPT, a chatbot for medical record understanding**\n
-						- Developed an automated fine-tuning dataset pipeline for a role-playing-based medical LLM service, SickGPT\n
-						- Built scenario generation agents for dialogue creation and fine-tuned LLaMA2-7B\n
-						- Designed evaluation pipeline measuring question relevance, BLEU score, and answer grounding\n
-					  **Authored a research paper on machine learning–based severity prediction for Chronic Kidney Disease**\n
+						- Designed a role-playing pipeline where agents interact to generate dialogue data, which was then used to fine-tune LLaMA2-7B.\n
+						- Developed an evaluation module measuring question relevance, BLEU score, and answer grounding\n
+					  **Authored a research paper on ML-based severity prediction for Chronic Kidney Disease**\n
 						- Built a voice-based CKD severity prediction model\n
 						- Proposed clinically grounded features and validated statistical significance\n
 						- Published a research paper in eTELEMED 2024 (Advisor: Prof. Sejoong Kim)
