@@ -3,8 +3,8 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Langfuse } from 'langfuse';
 import { getRetrievalPlan } from './retrieval-planner';
-import { publications } from '../../data/cv';
-import { RESEARCH_ICONS } from '../../data/researchIcons';
+import path from 'path';
+import { experiences, publications, projects } from '@/data/cv';
 
 // prerender 비활성화
 export const prerender = false;
@@ -51,14 +51,14 @@ async function rewriteQueryWithHistory(query: string, history: any[], trace: any
   if (!latestUser || !latestBot) return query;
 
   const prompt = `
-이전 질문과 답변을 참고해서 현재 질문을 더 구체적으로 다시 써줘.
+  Based on the previous question and answer, rewrite the current question to be more specific. If the previous question and answer are not helpful, just return the current question.
 
-이전 질문: ${latestUser}
-이전 답변: ${latestBot}
-현재 질문: ${query}
+  Previous question: ${latestUser}
+  Previous answer: ${latestBot}
+  Current question: ${query}
 
-구체화된 질문:
-`;
+  Rewritten question:
+  `;
 
   const result = await generativeModel.generateContent(prompt);
   rewriteSpan.end({
@@ -69,23 +69,48 @@ async function rewriteQueryWithHistory(query: string, history: any[], trace: any
 }
 
 // 벡터 DB에서 관련 정보 검색
-async function searchVectorDB(query: string, history: any[], trace: any) {
-  const searchSpan = trace.span({ name: 'vector-search' });
+async function searchVectorDB(query: string, history: any[], trace: any): Promise<{
+  relevant: boolean;
+  retrievalRequired: boolean;
+  contexts: any[];
+}> {
+  const planSpan = trace.span({ name: 'plan-decision' });
   try {
     const planner = await getRetrievalPlan(query);
-
+    planSpan.end({
+      input: query,
+      output: planner,
+    });
+    console.log(planner.relevant);
     if (!planner.relevant) {
-      searchSpan.end({ input: query, output: 'irrelevant' });
-      return [];
+      planSpan.end({
+        input: query,
+        output: 'irrelevant',
+      });
+      return {
+        relevant: false,
+        retrievalRequired: false,
+        contexts: [],
+      };
+    }
+
+    if (!planner.retrievalRequired) {
+      planSpan.end({
+        input: query,
+        output: 'relevant, no retrieval needed',
+      });
+      return {
+        relevant: true,
+        retrievalRequired: false,
+        contexts: [],
+      };
     }
 
     const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
 
-    // 쿼리 임베딩 생성
     const queryEmbedding = await embedText(rewrittenQuery);
     const index = pinecone.index(PINECONE_INDEX_NAME);
-    
-    // Pinecone에서 유사한 벡터 검색
+
     const pineconeQuery: any = {
       vector: queryEmbedding,
       topK: 5,
@@ -93,16 +118,8 @@ async function searchVectorDB(query: string, history: any[], trace: any) {
       includeValues: false,
     };
 
-    if (planner.retrievalRequired && planner.strategy?.filterBy) {
-      pineconeQuery.filter = {};
-      planner.strategy.filterBy.forEach((field: string) => {
-        pineconeQuery.filter[field] = { $exists: true };
-      });
-    }
-
     const results = await index.query(pineconeQuery);
 
-    // 검색 결과에서 텍스트 추출
     const contexts = results.matches.map(match => ({
       text: match.metadata?.text || match.metadata?.pageContent || "No content available",
       docType: match.metadata?.doc_type || "unknown",
@@ -111,23 +128,8 @@ async function searchVectorDB(query: string, history: any[], trace: any) {
       source: match.metadata?.source || "unknown",
       score: match.score,
     }));
-    
-    // 검색 결과 로깅
-    // trace.event({
-    //   name: 'vector-search-results',
-    //   input: { query },
-    //   output: { 
-    //     resultCount: contexts.length,
-    //     topResults: contexts.slice(0, 3).map(context => ({
-    //       contentType: context.contentType,
-    //       source: context.source,
-    //       score: context.score,
-    //       previewText: typeof context.text === 'string' ? context.text.substring(0, 100) + '...' : 'No preview available'
-    //     }))
-    //   }
-    // });
-    
-    // searchSpan.end();
+    const searchSpan = trace.span({ name: 'vector-search' });
+
     searchSpan.end({
       input: { rewrittenQuery },
       output: {
@@ -141,56 +143,78 @@ async function searchVectorDB(query: string, history: any[], trace: any) {
         })),
       },
     });
-    return contexts;
+
+    return {
+      relevant: true,
+      retrievalRequired: true,
+      contexts,
+    };
   } catch (error) {
     console.error('벡터 DB 검색 오류:', error);
-    searchSpan.end({ status: 'error', error: String(error) });
-    return [];
+    return {
+      relevant: false,
+      retrievalRequired: false,
+      contexts: [],
+    };
   }
 }
 
+// const PAGES_DIR = path.join(process.cwd(), 'src/pages');
 // 사이트맵 생성 함수
-function generateSiteMap() {
-  // 기본 페이지 정보
-  const pages = [
-    { path: '/', title: 'Home', description: '메인 페이지' },
-    { path: '/research', title: 'Research', description: '연구 분야 및 프로젝트' },
-    { path: '/papers', title: 'Papers', description: '논문 목록 및 상세 정보' },
-    { path: '/cv', title: 'CV', description: '이력서 및 학력 정보' },
-    { path: '/blog', title: 'Blog', description: '블로그 포스트' }
-  ];
+type SiteMapLink = {
+  label: string;
+  href: string;
+};
 
-  // 논문 정보 추가
-  const papers = publications.map((paper: { title: string; journal: string; time: string; authors: string; highlight: boolean }) => ({
-    path: `/papers#${paper.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-    title: paper.title,
-    description: `${paper.journal} (${paper.time})`,
-    authors: paper.authors,
-    highlight: paper.highlight
-  }));
+function generateSiteMapLinks(): SiteMapLink[] {
+  const siteMap: SiteMapLink[] = [];
 
-  // 연구 분야 정보 추가
-  const researchAreas = Object.entries(RESEARCH_ICONS).map(([key, value]: [string, { title: string }]) => ({
-    path: `/research#${key}`,
-    title: value.title,
-    description: '연구 분야 상세 정보'
-  }));
+  siteMap.push({ label: 'Home', href: '/' });
 
-  // 사이트맵 텍스트 생성
-  const baseMap = pages.map(page => `- ${page.title} (${page.path}): ${page.description}`).join('\n');
-  
-  const papersMap = papers.map(paper => 
-    `  - ${paper.title} (${paper.path})
-     저자: ${paper.authors}
-     출처: ${paper.description}
-     ${paper.highlight ? '(주요 논문)' : ''}`
-  ).join('\n');
+  siteMap.push({ label: 'Papers', href: '/papers' });
+  publications.forEach(pub => {
+    siteMap.push({ label: pub.title, href: pub.link });
+  });
 
-  const researchMap = researchAreas.map(area => 
-    `  - ${area.title} (${area.path}): ${area.description}`
-  ).join('\n');
+  siteMap.push({ label: 'Research', href: '/research' });
 
-  return `${baseMap}\n\n### 논문 목록:\n${papersMap}\n\n### 연구 분야:\n${researchMap}`;
+  // siteMap.push({ label: 'CV', href: '/cv' });
+
+  siteMap.push({ label: 'CV/Education', href: '/cv#education' });
+
+  siteMap.push({ label: 'CV/Experiences', href: '/cv#experiences' });
+
+  siteMap.push({ label: 'CV/Projects', href: '/cv#projects' });
+  projects.forEach(project => {
+    siteMap.push({ label: project.title, href: project.link });
+  });
+
+  siteMap.push({ label: 'CV/Awards & Honors', href: '/cv#awards' });
+  siteMap.push({ label: 'CV/Other Experiences', href: '/cv#other-experiences' });
+  siteMap.push({ label: 'CV/Skills', href: '/cv#skills' });
+
+  return siteMap;
+}
+
+const siteMap = generateSiteMapLinks();
+console.log(siteMap);
+
+function linkifyResponse(responseText: string, links: SiteMapLink[]): string {
+  let result = responseText;
+
+  links.forEach(({ label, href }) => {
+    const escapedLabel = label//.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 정규식 이스케이프
+    const regex = new RegExp(`\\b(${escapedLabel})\\b`, 'g');
+
+    const isExternal = href.startsWith('http');
+    const anchor = isExternal
+      ? `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-bold hover:text-blue-800">$1</a>`
+      : `<a href="${href}" class="text-blue-600 underline font-bold hover:text-blue-800">$1</a>`;
+
+    result = result.replace(regex, anchor);
+  });
+
+  return result;
 }
 
 // 답변 생성 함수
@@ -208,13 +232,14 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
       const role = msg.role === 'user' ? 'User' : 'Assistant';
       return `${role}: ${msg.parts[0].text}`;
     }).join('\n');
+    const siteMapLinks = generateSiteMapLinks();
     
     // 동적 사이트맵 생성
     const siteMap = `
       ### Site Map:
-      ${generateSiteMap()}
+      ${siteMapLinks}
     `;
-    
+    const labelList = siteMapLinks.map(link => `- ${link.label}`).join('\n');
     // 프롬프트 구성
     const prompt = `
       You are Kangbeen Ko(고강빈), responding based on the information provided on your personal profile page. Use the following context to answer the user's question.  
@@ -231,17 +256,18 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
 
       ### Instructions:
       1. Only use the context to answer.
-      2. Use the same language as the user.
-      3. If the question is not related to either the profile page or the PDF, do not provide an answer.
-      4. Respond in a friendly and professional tone, using the same language as the user.
-      5. If more information or clarification is needed, guide the user to the relevant section or document.
+      2. Use the same language as the user. If the user's language is Korean, use Korean. If the user's language is English, use English.
+      3. If the question is not related to Kangbeen Ko's profile, do not provide an answer.
+      4. Respond in a friendly and professional tone.
+      5. If more information or clarification is needed, guide the user to the relevant pages in the site map.
       6. Keep your answer concise—no more than 500 characters.
-      7. After your main response, if relevant, add a reference to specific pages where users can find more information. For example:
-         - For paper-related questions: "더 자세한 내용은 Papers 탭의 [논문 제목]을 참고해주세요."
-         - For research-related questions: "연구 내용에 대해 더 알고 싶으시다면 Research 탭의 [연구 분야] 섹션을 방문해주세요."
-         - For project-related questions: "프로젝트에 대한 자세한 내용은 Projects 탭에서 확인하실 수 있습니다."
-      8. When referencing papers or research areas, use the exact titles and paths provided in the site map.
+      7. After your main response, if relevant, add a reference to specific pages where users can find more information.
+      8. When referencing papers, pages, or sections, you **must only use labels from the site map below.**
+        Do not create or infer any titles on your own.
+        The label text must match exactly, including spacing, capitalization, and punctuation.
 
+      ### Allowed Labels (Use Exactly as Written):
+      ${labelList}
       ### User Question:
       ${query}
 
@@ -251,7 +277,7 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
     // Gemini 모델로 응답 생성
     const result = await generativeModel.generateContent(prompt);
     const responseText = result.response.text();
-
+    const linkedResponse = linkifyResponse(responseText, siteMapLinks);
     // LLM 생성 로깅
     trace.generation({
       name: 'chat-response',
@@ -271,7 +297,7 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
       }
     });
     
-    return responseText;
+    return linkedResponse;
   } catch (error) {
     console.error('응답 생성 오류:', error);
     return '죄송합니다. 응답을 생성하는 중에 오류가 발생했습니다. 다시 시도해주세요.';
@@ -279,11 +305,9 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
 }
 
 export const POST: APIRoute = async ({ request }) => {
-  // 세션 ID 생성 또는 가져오기
   const sessionId = crypto.randomUUID();
   const userId = `user-${Math.floor(Math.random() * 10000)}`;
-  
-  // Langfuse 트레이스 생성
+
   const trace = langfuse.trace({
     name: 'chat-session',
     userId,
@@ -293,22 +317,11 @@ export const POST: APIRoute = async ({ request }) => {
       source: 'web-app',
     },
   });
-  
+
   try {
     const body = await request.json();
     const { message, history = [], sessionId: clientSessionId } = body;
-    
-    // 요청 정보 로깅
-    // trace.event({
-    //   name: 'chat-request', 
-    //   input: { 
-    //     message, 
-    //     historyLength: history.length,
-    //     sessionId: clientSessionId || sessionId,
-    //     timestamp: new Date().toISOString()
-    //   }
-    // });
-    
+
     if (!message) {
       const errorResponse = { error: '메시지가 없습니다.' };
       trace.event({
@@ -316,45 +329,41 @@ export const POST: APIRoute = async ({ request }) => {
         input: { type: 'validation-error' },
         output: errorResponse
       });
-      
-      return new Response(
-        JSON.stringify(errorResponse),
-        { status: 400 }
-      );
+      return new Response(JSON.stringify(errorResponse), { status: 400 });
     }
-    
-    // 벡터 DB에서 관련 정보 검색
-    const contexts = await searchVectorDB(message, history, trace);
-    
-    // 응답 생성
-    const response = await generateResponse(message, contexts, history, trace);
-    
-    await trace.update({
-      input: message,
-      output: response,
-    });
 
-    return new Response(
-      JSON.stringify({ response }),
-      {
+    // ✅ 전체 결과 받기
+    const { relevant, retrievalRequired, contexts } = await searchVectorDB(message, history, trace);
+
+    // ✅ 관련성 없음 → 즉시 거절
+    if (!relevant) {
+      const rejection = 'Sorry. Your questions is not related to me.';
+      await trace.update({ input: message, output: rejection });
+      return new Response(JSON.stringify({ response: rejection }), {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ✅ 응답 생성 (retrievalRequired 여부와 무관하게 context 사용)
+    const response = await generateResponse(message, contexts, history, trace);
+
+    await trace.update({ input: message, output: response });
+
+    return new Response(JSON.stringify({ response }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('API 오류:', error);
-    
-    // 오류 로깅
+
     trace.event({
       name: 'error',
       input: { type: 'api-error', message: String(error) }
     });
-    
-    return new Response(
-      JSON.stringify({ error: '서버 오류가 발생했습니다.' }),
-      { status: 500 }
-    );
+
+    return new Response(JSON.stringify({ error: '서버 오류가 발생했습니다.' }), {
+      status: 500,
+    });
   }
-}; 
+};
