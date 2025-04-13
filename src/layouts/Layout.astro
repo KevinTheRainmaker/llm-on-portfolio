@@ -77,6 +77,13 @@ const {
 					<slot />
 				<Footer />
 				</main>
+				
+				<!-- 최상단으로 이동하는 플로팅 버튼 -->
+				<button id="scrollToTopBtn" class="fixed bottom-6 right-6 size-12 rounded-full bg-accent text-white shadow-lg flex items-center justify-center opacity-0 transition-opacity duration-300 z-50 hover:bg-accent-focus">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+					</svg>
+				</button>
 			</div>
 			<!-- Drawer side -->
 			<div class='drawer-side z-40'>
@@ -88,6 +95,46 @@ const {
 		
 		<!-- Vercel Speed Insights -->
 		<SpeedInsights />
+		
+		<script is:inline>
+			// 스크롤 투 탑 버튼 초기화 함수
+			function initScrollToTopButton() {
+				const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+				
+				if (!scrollToTopBtn) return; // 버튼이 없으면 종료
+				
+				const scrollFunction = () => {
+					if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+						scrollToTopBtn.classList.remove('opacity-0');
+						scrollToTopBtn.classList.add('opacity-100');
+					} else {
+						scrollToTopBtn.classList.remove('opacity-100');
+						scrollToTopBtn.classList.add('opacity-0');
+					}
+				};
+				
+				// 초기 스크롤 위치에 따라 버튼 표시 여부 결정
+				scrollFunction();
+				
+				// 스크롤 이벤트 리스너 추가
+				window.addEventListener('scroll', scrollFunction);
+				
+				// 클릭 이벤트 리스너 추가
+				scrollToTopBtn.addEventListener('click', () => {
+					window.scrollTo({
+						top: 0,
+						behavior: 'smooth'
+					});
+				});
+			}
+			
+			// 페이지 로드 시 초기화
+			document.addEventListener('DOMContentLoaded', initScrollToTopButton);
+			
+			// Astro View Transitions 지원
+			document.addEventListener('astro:page-load', initScrollToTopButton);
+			document.addEventListener('astro:after-swap', initScrollToTopButton);
+		</script>
 	</body>
 </html>
 
@@ -113,5 +160,14 @@ const {
   @keyframes typing {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-0.5rem); }
+  }
+  
+  /* 스크롤 투 탑 버튼 애니메이션 */
+  #scrollToTopBtn {
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  
+  #scrollToTopBtn:hover {
+    transform: translateY(-5px);
   }
 </style>
