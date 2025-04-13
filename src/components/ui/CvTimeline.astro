@@ -8,6 +8,12 @@ interface Props {
 }
 
 const { elements, colored } = Astro.props
+
+// **text** 형식을 <strong>text</strong>로 변환하는 함수
+function formatBoldText(text: string) {
+  if (!text) return '';
+  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
 ---
 
 <ul
@@ -37,23 +43,27 @@ const { elements, colored } = Astro.props
 					<div class='text-lg font-black'>
 						{isExperience(element) ? element.title : element.degree}
 					</div>
-					{element.description ? (
+					{element.description && element.description.trim() !== '' ? (
 						<div class='tooltip-container'>
 							<div class='tooltip-trigger'>
 								{isExperience(element) && element.companyLink ? (
 									<a href={element.companyLink} target="_blank" rel="noopener noreferrer" class="company-link">
 										{element.company}
+										<span class="tooltip-icon">💬</span>
 									</a>
 								) : !isExperience(element) && element.schoolLink ? (
 									<a href={element.schoolLink} target="_blank" rel="noopener noreferrer" class="company-link">
 										{element.school}
+										<span class="tooltip-icon">💬</span>
 									</a>
 								) : (
-									isExperience(element) ? element.company : element.school
+									<span class="company-name">
+										{isExperience(element) ? element.company : element.school}
+										<span class="tooltip-icon">💬</span>
+									</span>
 								)}
-								<span class="tooltip-icon">💬</span>
 							</div>
-							<div class='tooltip-content markdown-content' data-markdown={element.description}></div>
+							<div class='tooltip-content formatted-text' set:html={formatBoldText(element.description)}></div>
 						</div>
 					) : (
 						<div>
@@ -90,6 +100,10 @@ const { elements, colored } = Astro.props
     cursor: help;
   }
   
+  .company-name {
+    color: #0d9488;
+  }
+  
   .tooltip-icon {
     font-size: 0.8em;
     margin-left: 0.25rem;
@@ -107,7 +121,7 @@ const { elements, colored } = Astro.props
     padding: 1rem;
     border-radius: 0.5rem;
     font-size: 1rem;
-    line-height: 1.2;
+    line-height: 1.5;
     z-index: 10;
     min-width: 250px;
     max-width: 500px;
@@ -138,51 +152,9 @@ const { elements, colored } = Astro.props
     color: #0f766e;
   }
   
-  /* 마크다운 스타일 */
-  .markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6 {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-  }
-  
-  .markdown-content h1 { font-size: 1.5rem; }
-  .markdown-content h2 { font-size: 1.3rem; }
-  .markdown-content h3 { font-size: 1.1rem; }
-  
-  .markdown-content p {
-    margin-bottom: 0.5rem;
-  }
-  
-  .markdown-content ul, .markdown-content ol {
-    margin-left: 1.5rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .markdown-content li {
-    margin-bottom: 0.25rem;
-  }
-  
-  .markdown-content code {
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 0.1rem 0.3rem;
-    border-radius: 0.2rem;
-    font-family: monospace;
-  }
-  
-  .markdown-content pre {
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 0.5rem;
-    border-radius: 0.3rem;
-    overflow-x: auto;
-    margin-bottom: 0.5rem;
-  }
-  
-  .markdown-content blockquote {
-    border-left: 3px solid #0d9488;
-    padding-left: 0.5rem;
-    margin-left: 0;
-    margin-bottom: 0.5rem;
-    font-style: italic;
+  /* 포맷팅된 텍스트 스타일 */
+  .formatted-text strong {
+    font-weight: 700;
   }
   
   /* 모바일 화면에서 툴팁 위치 및 크기 조정 */
@@ -204,59 +176,12 @@ const { elements, colored } = Astro.props
 </style>
 
 <script>
-  // 마크다운을 HTML로 변환하는 함수
-  function markdownToHtml(markdown) {
-    if (!markdown) return '';
-    
-    // 줄바꿈 처리
-    let html = markdown.replace(/\n/g, '<br>');
-    
-    // 헤더 처리
-    html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-    html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-    
-    // 굵은 텍스트
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    
-    // 기울임 텍스트
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    
-    // 코드 블록
-    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-    
-    // 인라인 코드
-    html = html.replace(/`(.*?)`/g, '<code>$1</code>');
-    
-    // 링크
-    html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    
-    // 목록 처리 (간단한 구현)
-    html = html.replace(/^\s*[-*+]\s+(.*$)/gm, '<li>$1</li>');
-    html = html.replace(/<li>(.*?)<\/li>/g, '<ul><li>$1</li></ul>');
-    
-    // 인용구
-    html = html.replace(/^\s*>\s+(.*$)/gm, '<blockquote>$1</blockquote>');
-    
-    return html;
-  }
-  
-  // 페이지 로드 시 마크다운 변환
   document.addEventListener('DOMContentLoaded', () => {
-    const tooltipContents = document.querySelectorAll('.markdown-content');
-    
-    tooltipContents.forEach(content => {
-      const markdown = content.getAttribute('data-markdown');
-      if (markdown) {
-        content.innerHTML = markdownToHtml(markdown);
-      }
-    });
-    
-    // 링크에 target="_blank" 속성 추가
-    const tooltipLinks = document.querySelectorAll('.tooltip-content a');
-    tooltipLinks.forEach(link => {
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
-    });
+    console.log('CvTimeline script loaded');
+  });
+  
+  // Astro View Transitions 지원
+  document.addEventListener('astro:page-load', () => {
+    console.log('CvTimeline page loaded');
   });
 </script>
