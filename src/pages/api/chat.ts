@@ -3,8 +3,7 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Langfuse } from 'langfuse';
 import { getRetrievalPlan } from './retrieval-planner';
-import path from 'path';
-import { experiences, publications, projects } from '@/data/cv';
+import { publications, projects } from '@/data/cv';
 
 // prerender 비활성화
 export const prerender = false;
@@ -78,19 +77,21 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
   try {
     const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
     const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
+    const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
+
     const plannerPrompt = latestUser && latestBot
-      ? `${latestUser}\n${latestBot}\n${query}`
-      : query;
+      ? `${latestUser}\n${latestBot}\n${rewrittenQuery}`
+      : rewrittenQuery;
 
     const planner = await getRetrievalPlan(plannerPrompt);
     planSpan.end({
-      input: { query, latestUser, latestBot },
+      input: { query, latestUser, latestBot, rewrittenQuery },
       output: planner,
     });
     console.log(plannerPrompt);
     if (!planner.relevant) {
       planSpan.end({
-        input: query,
+        input: { query, latestUser, latestBot, rewrittenQuery },
         output: 'irrelevant',
       });
       return {
@@ -102,7 +103,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
 
     if (!planner.retrievalRequired) {
       planSpan.end({
-        input: query,
+        input: { query, latestUser, latestBot, rewrittenQuery },
         output: 'relevant, no retrieval needed',
       });
       return {
@@ -112,7 +113,6 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
       };
     }
 
-    const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
 
     const queryEmbedding = await embedText(rewrittenQuery);
     const index = pinecone.index(PINECONE_INDEX_NAME);
@@ -178,6 +178,8 @@ function generateSiteMapLinks(): SiteMapLink[] {
   siteMap.push({ label: 'Home', href: '/' });
 
   siteMap.push({ label: 'Papers', href: '/papers' });
+  siteMap.push({ label: 'Featured Publications', href: '/papers#featured' });
+  siteMap.push({ label: 'Other Publications', href: '/papers#all-publications' });
   publications.forEach(pub => {
     siteMap.push({ label: pub.title, href: pub.link });
   });
@@ -202,8 +204,6 @@ function generateSiteMapLinks(): SiteMapLink[] {
   return siteMap;
 }
 
-const siteMap = generateSiteMapLinks();
-console.log(siteMap);
 
 function linkifyResponse(responseText: string, links: SiteMapLink[]): string {
   let result = responseText;
@@ -232,48 +232,56 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
       const meta = ctx.summary ? `요약: ${ctx.summary}\n키워드: ${ctx.keywords.join(', ')}` : '';
       return `${base}\n${meta}`;
     }).join('\n\n');
-    
+
     // 대화 기록 텍스트로 변환
     const historyText = chatHistory.map(msg => {
       const role = msg.role === 'user' ? 'User' : 'Assistant';
       return `${role}: ${msg.parts[0].text}`;
     }).join('\n');
-    const siteMapLinks = generateSiteMapLinks();
-    
+    console.log(historyText);
+
+    const siteMap = generateSiteMapLinks();
     // 동적 사이트맵 생성
-    const siteMap = `
-      ### Site Map:
-      ${siteMapLinks}
-    `;
-    const labelList = siteMapLinks.map(link => `- ${link.label}`).join('\n');
+
+    const filteredSiteMapLinks = siteMap.filter(link => {
+      const isPaper = publications.some(pub => pub.title === link.label);
+      const isProject = projects.some(proj => proj.title === link.label);
+      return !isPaper && !isProject;
+    });
+    
+    const labelList = filteredSiteMapLinks.map(link => `- ${link.label}`).join('\n');
     // 프롬프트 구성
     const prompt = `
-      You are Kangbeen Ko(고강빈), responding based on the information provided on your personal profile page. Use the following context to answer the user's question.  
-      Your responses should be **friendly and professional**, and provided in **the same language the user used**.
-
-      ${siteMap}
+      You are Kangbeen Ko(고강빈)'s Digital twin. 
+      Responding based on the information provided on your personal profile page. Use the following context to answer the user's question.  
+      Your responses should be **friendly, helpful, and professional**.
+      Provide your responses in **the same language the user used**.
 
       ### Context Information:
       current time: ${new Date().toISOString()}
       ${contextText}
-
+      
       ### Conversation History:  
       ${historyText}
-
+      
       ### Instructions:
       1. Only use the context to answer.
       2. Use the same language as the user. If the user's language is Korean, use Korean. If the user's language is English, use English.
       3. If the question is not related to Kangbeen Ko's profile, do not provide an answer.
       4. Respond in a friendly and professional tone.
-      5. If more information or clarification is needed, guide the user to the relevant pages in the site map.
-      6. Keep your answer concise—no more than 500 characters.
-      7. After your main response, if relevant, add a reference to specific pages where users can find more information.
-      8. When referencing papers, pages, or sections, you **must only use labels from the site map below.**
+      5. Keep your answer concise—no more than 500 characters.
+      6. After your main response, add a reference to a specific page or section based on the site map **only if** it would help the user discover or locate additional information 
+        Do **not** repeat references that were already provided in a conversation history unless they are essential again for clarity.
+      7. When referencing pages or sections, you **must only use labels from the allowed labels below.**
         Do not create or infer any titles on your own.
         The label text must match exactly, including spacing, capitalization, and punctuation.
+      
+      ### Site Map:
+      ${siteMap}
 
       ### Allowed Labels (Use Exactly as Written):
       ${labelList}
+
       ### User Question:
       ${query}
 
@@ -283,7 +291,7 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
     // Gemini 모델로 응답 생성
     const result = await generativeModel.generateContent(prompt);
     const responseText = result.response.text();
-    const linkedResponse = linkifyResponse(responseText, siteMapLinks);
+    const linkedResponse = linkifyResponse(responseText, siteMap);
     // LLM 생성 로깅
     trace.generation({
       name: 'chat-response',
