@@ -1,5 +1,5 @@
 ---
-title: "Projects"
+title: "CV / Projects"
 description: "Personal and professional projects"
 ---
 

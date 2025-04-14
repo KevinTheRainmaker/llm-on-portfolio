@@ -1,5 +1,5 @@
 ---
-title: "Skills"
+title: "CV / Skills"
 description: "Technical and professional skills"
 ---
 

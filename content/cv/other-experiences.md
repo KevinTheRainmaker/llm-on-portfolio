@@ -1,5 +1,5 @@
 ---
-title: "Other Experiences"
+title: "CV / Other Experiences"
 description: "Additional professional activities and experiences"
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: "Awards & Honors"
+title: "CV / Awards & Honors"
 description: "Recognitions and achievements"
 ---
 

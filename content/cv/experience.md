@@ -1,5 +1,5 @@
 ---
-title: "Professional Experience"
+title: "CV / Experience"
 description: "Work experience and professional career details"
 ---
 

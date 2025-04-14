@@ -1,5 +1,5 @@
 ---
-title: "Education"
+title: "CV / Education"
 description: "Academic background and education details"
 ---
 
