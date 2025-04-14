@@ -30,7 +30,27 @@ const {
 
 		<Head title={title} description={description} image={image} />
 
-
+		<!-- 모바일 디바이스 감지 및 리다이렉트 -->
+		<script is:inline>
+			// 현재 페이지가 모바일 페이지인지 확인
+			const isMobilePage = window.location.pathname === '/mobile';
+			
+			// 모바일 디바이스 감지 함수
+			function isMobileDevice() {
+				return (window.innerWidth <= 768) || 
+					(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+			}
+			
+			// 모바일 디바이스이면서 모바일 페이지가 아닐 경우 리다이렉트
+			if (isMobileDevice() && !isMobilePage) {
+				window.location.href = '/mobile';
+			}
+			
+			// 데스크톱에서 모바일 페이지 접근 시 메인 페이지로 리다이렉트
+			if (!isMobileDevice() && isMobilePage) {
+				window.location.href = '/';
+			}
+		</script>
 
 	</head>
 	<body>
