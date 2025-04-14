@@ -270,7 +270,8 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
       3. If the question is not related to Kangbeen Ko's profile, do not provide an answer.
       4. Respond in a friendly and professional tone.
       5. Keep your answer concise—no more than 500 characters.
-      6. After your main response, add a reference to a specific page or section based on the site map **only if** it would help the user discover or locate additional information 
+      6. After your main response, add a reference to a specific page or section based on the site map **only if** it would help the user discover or locate additional information.
+        For example, "For more details, please refer to the [section] on the [page] page".
         Do **not** repeat references that were already provided in a conversation history unless they are essential again for clarity.
       7. When referencing pages or sections, you **must only use labels from the allowed labels below.**
         Do not create or infer any titles on your own.
