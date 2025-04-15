@@ -44,37 +44,58 @@ async function embedText(text: string): Promise<number[]> {
 
 // 질문 리라이터
 async function rewriteQueryWithHistory(query: string, history: any[], trace: any): Promise<string> {
-  const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
-  const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
+  // const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
+  // const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
   const rewriteSpan = trace.span({ name: 'rewrite-query' });
-  if (!latestUser || !latestBot) return query;
+  // if (!latestUser || !latestBot) return query;
+
+  function formatHistory(history: any[]) {
+    let qCount = 1;
+    let aCount = 1;
+    return history
+      .filter(h => h.role === 'user' || h.role === 'model')
+      .map(h => {
+        if (h.role === 'user') {
+          return `Q${qCount++}: ${h.parts?.[0]?.text ?? ''}`;
+        } else {
+          return `A${aCount++}: ${h.parts?.[0]?.text ?? ''}`;
+        }
+      })
+      .join('\n');
+  }
 
   const prompt = `
-  You are helping rewrite a user question by using relevant context from the previous conversation **only if necessary**.
-  
-  If the current question makes sense on its own, keep it mostly unchanged.
-  But if the current question is ambiguous (e.g. "What about their advisor?"), rewrite it to include the specific subject from the previous answer.
-  
-  Make sure the rewritten question:
-  1. Refers explicitly to the correct person or subject, if the question is ambiguous.
-  2. Is clear about what is being asked (e.g. "advisor" of a person, not of a paper).
-  3. Can be used to search the correct source (e.g. CV, people profile, not publications).
-  4. Does not invent or assume information not given in the previous answer.
-  
-  ---  
-  Previous question: ${latestUser}  
-  Previous answer: ${latestBot}  
-  Current question: ${query}  
-    
+  You are rewriting a user question using relevant information from the entire conversation history.
+
+  Task:
+  - Use earlier parts of the conversation **only if** the current question is ambiguous or incomplete.
+  - If the current question is clear and self-contained, return it as-is.
+  - Do not add or assume any information that is not present in the conversation.
+
+  Guidelines:
+  1. If the current question refers to something mentioned earlier (e.g. "his advisor", "the author"), replace the pronoun or vague reference with the specific subject.
+  2. Make the rewritten question unambiguous and easy to search with.
+  3. Make sure the question refers to the correct entity type (e.g. a person, not a paper).
+  4. Avoid altering the user's intent.
+
+  ---
+
+  Conversation history:
+  ${formatHistory(history)}
+
+  Current question: ${query}
+
   Rewritten question:
   `;
 
   const result = await generativeModel.generateContent(prompt);
+  const rewritten = result.response.text().trim().replace(/^Rewritten question:\s*/i, '');
   rewriteSpan.end({
     input: { query },
-    output: result.response.text(),
+    output: rewritten,
   });
-  return result.response.text();
+
+  return rewritten;
 }
 
 async function FullContextGenerator(query: string, history: any[], trace: any): Promise<string> {
