@@ -67,6 +67,19 @@ async function rewriteQueryWithHistory(query: string, history: any[], trace: any
   return result.response.text();
 }
 
+async function FullContextGenerator(query: string, history: any[], trace: any): Promise<string> {
+  const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
+  const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
+  if (!latestUser || !latestBot) return query;
+
+  const full_context = `
+  Q1: ${latestUser}
+  A1: ${latestBot}
+  Q2: ${query}
+  `
+  return full_context;
+}
+
 // 벡터 DB에서 관련 정보 검색
 async function searchVectorDB(query: string, history: any[], trace: any): Promise<{
   relevant: boolean;
@@ -77,21 +90,22 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
   try {
     const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
     const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
-    const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
+    // const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
+    const fullContext = await FullContextGenerator(query, history, trace);
 
-    const plannerPrompt = latestUser && latestBot
-      ? `${latestUser}\n${latestBot}\n${rewrittenQuery}`
-      : rewrittenQuery;
+    // const plannerPrompt = latestUser && latestBot
+    //   ? `${latestUser}\n${latestBot}\n${rewrittenQuery}`
+    //   : rewrittenQuery;
 
-    const planner = await getRetrievalPlan(plannerPrompt);
+    const planner = await getRetrievalPlan(fullContext);
     planSpan.end({
-      input: { query, latestUser, latestBot, rewrittenQuery },
+      input: { query, latestUser, latestBot, fullContext },
       output: planner,
     });
-    console.log(plannerPrompt);
+    console.log(fullContext);
     if (!planner.relevant) {
       planSpan.end({
-        input: { query, latestUser, latestBot, rewrittenQuery },
+        input: { query, latestUser, latestBot, fullContext },
         output: 'irrelevant',
       });
       return {
@@ -103,7 +117,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
 
     if (!planner.retrievalRequired) {
       planSpan.end({
-        input: { query, latestUser, latestBot, rewrittenQuery },
+        input: { query, latestUser, latestBot, fullContext },
         output: 'relevant, no retrieval needed',
       });
       return {
@@ -114,7 +128,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
     }
 
 
-    const queryEmbedding = await embedText(rewrittenQuery);
+    const queryEmbedding = await embedText(fullContext);
     const index = pinecone.index(PINECONE_INDEX_NAME);
 
     const pineconeQuery: any = {
@@ -137,7 +151,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
     const searchSpan = trace.span({ name: 'vector-search' });
 
     searchSpan.end({
-      input: { rewrittenQuery },
+      input: { fullContext },
       output: {
         resultCount: contexts.length,
         topMatches: contexts.slice(0, 3).map(c => ({
