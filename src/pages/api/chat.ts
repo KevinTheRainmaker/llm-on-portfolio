@@ -50,12 +50,22 @@ async function rewriteQueryWithHistory(query: string, history: any[], trace: any
   if (!latestUser || !latestBot) return query;
 
   const prompt = `
-  Based on the previous question and answer, rewrite the current question to be more specific. If the previous question and answer are not helpful, just return the current question.
-
-  Previous question: ${latestUser}
-  Previous answer: ${latestBot}
-  Current question: ${query}
-
+  You are helping rewrite a user question by using relevant context from the previous conversation **only if necessary**.
+  
+  If the current question makes sense on its own, keep it mostly unchanged.
+  But if the current question is ambiguous (e.g. "What about their advisor?"), rewrite it to include the specific subject from the previous answer.
+  
+  Make sure the rewritten question:
+  1. Refers explicitly to the correct person or subject, if the question is ambiguous.
+  2. Is clear about what is being asked (e.g. "advisor" of a person, not of a paper).
+  3. Can be used to search the correct source (e.g. CV, people profile, not publications).
+  4. Does not invent or assume information not given in the previous answer.
+  
+  ---  
+  Previous question: ${latestUser}  
+  Previous answer: ${latestBot}  
+  Current question: ${query}  
+    
   Rewritten question:
   `;
 
@@ -90,22 +100,21 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
   try {
     const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
     const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
-    // const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
-    const fullContext = await FullContextGenerator(query, history, trace);
+    const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
+    // const fullContext = await FullContextGenerator(query, history, trace);
 
     // const plannerPrompt = latestUser && latestBot
     //   ? `${latestUser}\n${latestBot}\n${rewrittenQuery}`
     //   : rewrittenQuery;
-
-    const planner = await getRetrievalPlan(fullContext);
+    const planner = await getRetrievalPlan(rewrittenQuery);
     planSpan.end({
-      input: { query, latestUser, latestBot, fullContext },
+      input: { query, latestUser, latestBot, rewrittenQuery },
       output: planner,
     });
-    console.log(fullContext);
+    console.log(rewrittenQuery);
     if (!planner.relevant) {
       planSpan.end({
-        input: { query, latestUser, latestBot, fullContext },
+        input: { query, latestUser, latestBot, rewrittenQuery },
         output: 'irrelevant',
       });
       return {
@@ -117,7 +126,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
 
     if (!planner.retrievalRequired) {
       planSpan.end({
-        input: { query, latestUser, latestBot, fullContext },
+        input: { query, latestUser, latestBot, rewrittenQuery },
         output: 'relevant, no retrieval needed',
       });
       return {
@@ -128,7 +137,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
     }
 
 
-    const queryEmbedding = await embedText(fullContext);
+    const queryEmbedding = await embedText(rewrittenQuery);
     const index = pinecone.index(PINECONE_INDEX_NAME);
 
     const pineconeQuery: any = {
@@ -151,7 +160,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
     const searchSpan = trace.span({ name: 'vector-search' });
 
     searchSpan.end({
-      input: { fullContext },
+      input: { rewrittenQuery },
       output: {
         resultCount: contexts.length,
         topMatches: contexts.slice(0, 3).map(c => ({
