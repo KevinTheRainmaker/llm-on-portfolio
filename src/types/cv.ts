@@ -26,6 +26,7 @@ export interface Publication {
   time: string;
   link?: string;
   abstract?: string;
+  summary?: string;
   highlight?: boolean;
   thumbnail?: string;
 }

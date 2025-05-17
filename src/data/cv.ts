@@ -57,6 +57,8 @@ export const education = [
 	  link: 'https://programs.sigchi.org/chi/2025/program/content/194268',
 	  thumbnail: '/images/publications/LEGOLAS_video_figure.gif', // thumbnail 경로
 	  highlight: true,
+	  abstract: 'LEGOLAS is an innovative LLM-augmented system designed to enhance golf skill learning and training. It combines computer vision with large language models to analyze swing mechanics and provide personalized, natural language feedback to golfers of all levels. The system offers real-time analysis, customized training plans, and progression tracking, creating a more accessible and efficient approach to golf improvement. This paper presents our findings from a user study with 24 participants, demonstrating significant skill improvements compared to traditional training methods.',
+	  summary: '**Summary**\nExisting self-training systems can visualize movement errors but **lack explanations for causes and corrections**, limiting users’ ability to improve independently. To bridge this gap, the study introduced a **LLM and RAG-based architecture** that delivers **personalized, principle-based verbal feedback**. \nThe system was developed using 3D motion capture, joint-level error detection, and **verbal coaching via TTS**. In a **4-condition user study (n=12)**, even **low-frequency feedback** led to sustained accuracy gains, indicating **improved self-directed learning** and **reduced dependence on external feedback**.\n\n**Key Results**\n- **Significant improvement in movement accuracy** with verbal feedback *(F(1,11) = 11.623, p < 0.01)*\n- **Increased self-evaluation confidence**, with interaction effects across feedback types *(F(1,11) = 5.410, p < 0.05)*\n- **No increase in cognitive load** under verbal feedback conditions *(NASA-TLX)* ',
 	},
 	{
 	  title: 'Leveraging voice for early detection of chronic kidney disease: Enabling continuous monitoring in remote healthcare',
@@ -191,7 +193,7 @@ export const awards = [
 		description: "Built a deep learning model for cerebral aneurysm localization using cerebral angiography imaging data."
 	},
 	{
-		title: "UN AI4Good Hackathon Chairman’s Award, Innopolis Foundation",
+		title: "UN AI4Good Hackathon Chairman's Award, Innopolis Foundation",
 		organization: "Ministry of Science and ICT, Korea",
 		time: "2024",
 		description: "Developed a multimodal LLM-based online shopping assistant for visually impaired users, capable of extracting on-screen information and providing voice-based responses to user queries."

@@ -6,6 +6,7 @@ import {template} from "@/settings";
 import HighlightPublication from "@/components/ui/HighlightPublication.astro";
 import PublicationsList from "@/components/ui/PublicationsList.astro";
 import SectionNav from '@/components/ui/SectionNav.astro';
+import SummaryPopup from '@/components/ui/SummaryPopup.astro';
 
 // 하이라이트된 논문과 일반 논문 분리
 const highlightedPublications = publications.filter(pub => pub.highlight);
@@ -46,4 +47,7 @@ const sections = [
       </section>
     )}
   </div>
+  
+  <!-- Include the shared summary popup -->
+  <SummaryPopup />
 </Layout>

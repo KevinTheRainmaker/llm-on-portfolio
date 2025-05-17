@@ -1,0 +1,138 @@
+---
+// A shared popup component for displaying publication summaries
+---
+
+<!-- Summary Popup -->
+<div id="summaryPopup" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden overflow-auto py-10">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 my-auto">
+    <div class="flex justify-between items-start mb-4">
+      <h3 id="popupTitle" class="text-xl font-bold pr-4"></h3>
+      <button id="closePopup" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex-shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div id="popupContent" class="text-gray-700 dark:text-gray-300 summary-content max-h-[60vh] overflow-y-auto pr-2"></div>
+  </div>
+</div>
+
+<style>
+  /* Customize scrollbar for the popup content */
+  .summary-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .summary-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+  }
+  
+  .summary-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+  }
+  
+  .summary-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+  
+  /* For Firefox */
+  .summary-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Dark mode scrollbar */
+  :global(.dark) .summary-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  :global(.dark) .summary-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
+  :global(.dark) .summary-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+  
+  :global(.dark) .summary-content {
+    scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.05);
+  }
+</style>
+
+<script>
+  // Initialize popup functionality
+  document.addEventListener('DOMContentLoaded', () => {
+    const summaryBtns = document.querySelectorAll('.summary-btn');
+    const popup = document.getElementById('summaryPopup');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupContent = document.getElementById('popupContent');
+    const closePopup = document.getElementById('closePopup');
+    
+    // Function to format text with markdown-like syntax
+    function formatSummaryText(text) {
+      if (!text) return '';
+      
+      // Handle line breaks
+      let formattedText = text.replace(/\n/g, '<br>');
+      
+      // Handle bullet points (- item)
+      formattedText = formattedText.replace(/- (.*?)(<br|$)/g, '<li>$1</li>');
+      
+      // Wrap lists in <ul> if there are any bullet points
+      if (formattedText.includes('<li>')) {
+        formattedText = formattedText.replace(/(<li>.*?<\/li>)+/g, '<ul class="pl-5 list-disc">$&</ul>');
+      }
+      
+      // Handle bold text wrapped in ** or __
+      formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      formattedText = formattedText.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      
+      // Handle italic text wrapped in * or _
+      formattedText = formattedText.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+      formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>');
+      
+      return formattedText;
+    }
+    
+    summaryBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const title = btn.getAttribute('data-title');
+        const summary = btn.getAttribute('data-summary');
+        
+        popupTitle.textContent = title;
+        popupContent.innerHTML = formatSummaryText(summary);
+        popup.classList.remove('hidden');
+        
+        // Lock body scroll when popup is open
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    
+    // Close popup when clicking the close button
+    closePopup.addEventListener('click', () => {
+      popup.classList.add('hidden');
+      // Restore body scroll when popup is closed
+      document.body.style.overflow = '';
+    });
+    
+    // Close popup when clicking outside the popup content
+    popup.addEventListener('click', (e) => {
+      if (e.target === popup) {
+        popup.classList.add('hidden');
+        // Restore body scroll when popup is closed
+        document.body.style.overflow = '';
+      }
+    });
+    
+    // Close popup when pressing Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !popup.classList.contains('hidden')) {
+        popup.classList.add('hidden');
+        // Restore body scroll when popup is closed
+        document.body.style.overflow = '';
+      }
+    });
+  });
+</script> 
