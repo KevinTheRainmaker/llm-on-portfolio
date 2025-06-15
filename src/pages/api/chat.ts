@@ -414,8 +414,17 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // ✅ 전체 결과 받기
-    const { relevant, retrievalRequired, contexts } = await searchVectorDB(message, history, trace);
+    const { relevant, retrievalRequired, contexts, rewrittenQuery } = await searchVectorDB(message, history, trace);
 
+    // 질문 형태라면 → 바로 사용자에게 리턴
+    if (rewrittenQuery && rewrittenQuery !== message && rewrittenQuery.endsWith('?')) {
+      await trace.update({ input: message, output: rewrittenQuery });
+      return new Response(JSON.stringify({ response: rewrittenQuery }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    
     // ✅ 관련성 없음 → 즉시 거절
     if (!relevant) {
       const rejection = 'Sorry. Your questions is not related to me.';
