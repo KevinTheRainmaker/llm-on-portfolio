@@ -43,48 +43,55 @@ async function embedText(text: string): Promise<number[]> {
 }
 
 // 질문 리라이터
-async function rewriteQueryWithHistory(query: string, history: any[], trace: any): Promise<string> {
+async function rewriteQuery(query: string, history: any[], trace: any): Promise<string> {
   // const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
   // const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
   const rewriteSpan = trace.span({ name: 'rewrite-query' });
   // if (!latestUser || !latestBot) return query;
 
-  function formatHistory(history: any[]) {
-    let qCount = 1;
-    let aCount = 1;
-    return history
-      .filter(h => h.role === 'user' || h.role === 'model')
-      .map(h => {
-        if (h.role === 'user') {
-          return `Q${qCount++}: ${h.parts?.[0]?.text ?? ''}`;
-        } else {
-          return `A${aCount++}: ${h.parts?.[0]?.text ?? ''}`;
-        }
-      })
-      .join('\n');
-  }
+  // function formatHistory(history: any[]) {
+  //   let qCount = 1;
+  //   let aCount = 1;
+  //   return history
+  //     .filter(h => h.role === 'user' || h.role === 'model')
+  //     .map(h => {
+  //       if (h.role === 'user') {
+  //         return `Q${qCount++}: ${h.parts?.[0]?.text ?? ''}`;
+  //       } else {
+  //         return `A${aCount++}: ${h.parts?.[0]?.text ?? ''}`;
+  //       }
+  //     })
+  //     .join('\n');
+  // }
 
   const prompt = `
-  You are rewriting a user question using relevant information from the entire conversation history.
-
-  Task:
-  - Use earlier parts of the conversation **only if** the current question is ambiguous or incomplete.
-  - If the current question is clear and self-contained, return it as-is.
-  - Do not add or assume any information that is not present in the conversation.
-
-  Guidelines:
-  1. If the current question refers to something mentioned earlier (e.g. "his advisor", "the author"), replace the pronoun or vague reference with the specific subject.
-  2. Make the rewritten question unambiguous and easy to search with.
-  3. Make sure the question refers to the correct entity type (e.g. a person, not a paper).
-  4. Avoid altering the user's intent.
-
-  ---
-
-  Conversation history:
-  ${formatHistory(history)}
-
-  Current question: ${query}
-
+  You are rewriting a user question to make it more precise, assuming the subject is a graduate student researcher.
+  
+  ## Profile Assumption:
+  The subject is an M.S. student at HCIS Lab, GIST (Gwangju Institute of Science and Technology), focused on AI × HCI research.  
+  They are a product-minded builder passionate about improving human life through responsible and innovative technologies.  
+  Their "work" often refers to academic research, publications, and technically rigorous projects.
+  
+  ## Objective:
+  - Clarify vague or ambiguous user queries.
+  - Reflect the most likely intent in an academic and research-driven context.
+  - If the original question is clear, return it unchanged.
+  
+  ## Guidelines:
+  1. Interpret general terms like "your recent work", "your contributions", or "your project" as referring to research output (e.g., publications or research projects), unless clearly meant otherwise.
+  2. Use reasonable assumptions about academic and research communication—but do not invent facts.
+  3. Preserve the original user intent and tone.
+  4. Only rewrite if ambiguity exists. Otherwise, return the question unchanged.
+  
+  ## Examples:
+  - “Tell me more about his latest work.” → “Tell me more about Kangbeen Ko’s most recent research publication.”
+  - “What is that project you mentioned?” → “What is the project titled ‘LLM-Augmented Golf Swing Analysis’?”
+  - “Can you tell me about your project?” → “Can you tell me about your research project titled ‘SickGPT’?”
+  - “What are you currently working on?” → “What research are you currently working on?”
+  
+  ## Input:
+  Current user question: ${query}
+  
   Rewritten question:
   `;
 
@@ -121,7 +128,7 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
   try {
     const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
     const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
-    const rewrittenQuery = await rewriteQueryWithHistory(query, history, trace);
+    const rewrittenQuery = await rewriteQuery(query, history, trace);
     // const fullContext = await FullContextGenerator(query, history, trace);
 
     // const plannerPrompt = latestUser && latestBot
@@ -296,42 +303,39 @@ async function generateResponse(query: string, contexts: any[], chatHistory: any
     const labelList = filteredSiteMapLinks.map(link => `- ${link.label}`).join('\n');
     // 프롬프트 구성
     const prompt = `
-      You are Kangbeen Ko(고강빈)'s Digital twin. 
-      Responding based on the information provided on your personal profile page. Use the following context to answer the user's question.  
-      Your responses should be **friendly, helpful, and professional**.
-      Provide your responses in **the same language the user used**.
-
-      ### Context Information:
-      current time: ${new Date().toISOString()}
-      ${contextText}
-      
-      ### Conversation History:  
-      ${historyText}
-      
-      ### Instructions:
-      1. Only use the context to answer.
-      2. Use the same language as the user. If the user's language is Korean, use Korean. If the user's language is English, use English.
-      3. If the question is not related to Kangbeen Ko's profile, do not provide an answer.
-      4. Respond in a friendly and professional tone.
-      5. Keep your answer concise—no more than 500 characters.
-      6. After your main response, add a reference to a specific page or section based on the site map **only if** it would help the user discover or locate additional information.
-        For example, "For more details, please refer to the [section] on the [page] page".
-        Do **not** repeat references that were already provided in a conversation history unless they are essential again for clarity.
-      7. When referencing pages or sections, you **must only use labels from the allowed labels below.**
-        Do not create or infer any titles on your own.
-        The label text must match exactly, including spacing, capitalization, and punctuation.
-      
-      ### Site Map:
-      ${siteMap}
-
-      ### Allowed Labels (Use Exactly as Written):
-      ${labelList}
-
-      ### User Question:
-      ${query}
-
-      ### Response:
-      `;
+    You are Kangbeen Ko(고강빈)'s digital twin.
+    You help visitors learn more about his academic and professional background using information from his personal website.
+    
+    ## Objective:
+    Answer the user's question using only the provided context and profile data. If helpful, guide the user to relevant sections of the site.
+    
+    ## Context Information:
+    current time: ${new Date().toISOString()}
+    ${contextText}
+    
+    ## Conversation History:
+    ${historyText}
+    
+    ## Instructions:
+    1. Use the context and conversation to provide an informative, concise answer.
+    2. Respond in the same language as the user (Korean or English).
+    3. Limit your response to 500 characters unless the context truly demands more.
+    4. Do not answer questions unrelated to Kangbeen Ko's profile.
+    5. Reference specific sections of the site *only if* it helps the user find more information.
+    6. Use only the exact labels from the allowed labels list below. Do not invent titles or paraphrase them.
+    7. Do not repeat previously mentioned references unless they are essential for clarity.
+    
+    ## Site Map:
+    ${siteMap.map(link => `- ${link.label} (${link.href})`).join('\n')}
+    
+    ## Allowed Labels (Use exactly as written):
+    ${filteredSiteMapLinks.map(link => `- ${link.label}`).join('\n')}
+    
+    ## User Question:
+    ${query}
+    
+    ## Response:
+    `;    
 
     // Gemini 모델로 응답 생성
     const result = await generativeModel.generateContent(prompt);
