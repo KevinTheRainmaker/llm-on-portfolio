@@ -41,6 +41,10 @@ async function embedText(text: string): Promise<number[]> {
     throw error;
   }
 }
+function isLikelyQuestion(text: string): boolean {
+  const lowered = text.toLowerCase().trim();
+  return lowered.endsWith('?') || /^[\s]*(what|which|who|when|why|how)\b/.test(lowered);
+}
 
 // 질문 리라이터
 async function rewriteQuery(query: string, history: any[], trace: any): Promise<string> {
@@ -123,12 +127,26 @@ async function searchVectorDB(query: string, history: any[], trace: any): Promis
   relevant: boolean;
   retrievalRequired: boolean;
   contexts: any[];
+  rewrittenQuery?: string;
 }> {
   const planSpan = trace.span({ name: 'plan-decision' });
   try {
     const latestUser = history.findLast(h => h.role === 'user')?.parts?.[0]?.text;
     const latestBot = history.findLast(h => h.role === 'model')?.parts?.[0]?.text;
     const rewrittenQuery = await rewriteQuery(query, history, trace);
+    if (isLikelyQuestion(rewrittenQuery)) {
+      planSpan.end({
+        input: { query, rewrittenQuery },
+        output: 'rewritten query is a question, skipping retrieval',
+      });
+    
+      return {
+        relevant: true,
+        retrievalRequired: false,
+        contexts: [],
+        rewrittenQuery, // ✅ 이 필드를 반환하여 상위에서 사용 가능
+      };
+    }
     // const fullContext = await FullContextGenerator(query, history, trace);
 
     // const plannerPrompt = latestUser && latestBot
