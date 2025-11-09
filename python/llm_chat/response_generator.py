@@ -1,6 +1,6 @@
 """
 Response Generator module
-Generates chat responses using Google Generative AI with context from vector search
+Generates chat responses using Google Generative AI with long-term memory context
 """
 
 import re
@@ -8,22 +8,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import google.generativeai as genai
 from .config import config
-
-
-# Site map data structure
-SITE_MAP_LINKS = [
-    {"label": "Home", "href": "/"},
-    {"label": "Papers", "href": "/papers"},
-    {"label": "Featured Publications", "href": "/papers#featured"},
-    {"label": "Other Publications", "href": "/papers#all-publications"},
-    {"label": "Research", "href": "/research"},
-    {"label": "CV/Education", "href": "/cv#education"},
-    {"label": "CV/Experiences", "href": "/cv#experiences"},
-    {"label": "CV/Projects", "href": "/cv#projects"},
-    {"label": "CV/Awards & Honors", "href": "/cv#awards"},
-    {"label": "CV/Other Experiences", "href": "/cv#other-experiences"},
-    {"label": "CV/Skills", "href": "/cv#skills"},
-]
+from .long_term_memory import get_long_term_memory
 
 
 def linkify_response(response_text: str, links: List[Dict[str, str]]) -> str:
@@ -62,89 +47,64 @@ def linkify_response(response_text: str, links: List[Dict[str, str]]) -> str:
 
 async def generate_response(
     query: str,
-    contexts: List[Dict[str, Any]],
-    chat_history: List[Dict[str, Any]],
+    session_history: str,
     trace: Optional[Any] = None
 ) -> str:
     """
-    Generate chat response using Gemini with provided contexts
+    Generate chat response using Gemini with long-term memory
 
     Args:
         query: User's query
-        contexts: List of context objects from vector search
-        chat_history: Chat conversation history
+        session_history: Formatted session conversation history
         trace: Langfuse trace object for logging
 
     Returns:
         Generated response text with HTML links
     """
     try:
-        # Convert contexts to text
-        context_parts = []
-        for ctx in contexts:
-            base = f"[{ctx['docType']}] {ctx['text']}"
-            if ctx.get('summary'):
-                meta = f"요약: {ctx['summary']}\n키워드: {', '.join(ctx.get('keywords', []))}"
-                context_parts.append(f"{base}\n{meta}")
-            else:
-                context_parts.append(base)
+        # Get long-term memory
+        ltm = get_long_term_memory()
 
-        context_text = "\n\n".join(context_parts)
+        # Get profile context from long-term memory
+        profile_context = ltm.get_context_for_llm()
 
-        # Convert chat history to text
-        history_parts = []
-        for msg in chat_history:
-            role = "User" if msg.get("role") == "user" else "Assistant"
-            text = msg.get("parts", [{}])[0].get("text", "")
-            history_parts.append(f"{role}: {text}")
-
-        history_text = "\n".join(history_parts)
-        print(f"History text: {history_text}")
-
-        # Generate site map
-        site_map = SITE_MAP_LINKS.copy()
-
-        # Filter site map (exclude publication/project titles for now)
-        filtered_site_map_links = site_map.copy()
-
-        # Create labels list
-        label_list = "\n".join([f"- {link['label']}" for link in filtered_site_map_links])
-
-        # Create full site map text
-        site_map_text = "\n".join([f"- {link['label']} ({link['href']})" for link in site_map])
+        # Get site links
+        site_links = ltm.get_site_links()
 
         # Current time
         current_time = datetime.utcnow().isoformat()
 
         # Construct prompt
         prompt = f"""
-You are Kangbeen Ko(고강빈)'s digital twin.
+You are Kangbeen Ko(고강빈)'s digital twin assistant.
 You help visitors learn more about his academic and professional background using information from his personal website.
 
 ## Objective:
-Answer the user's question using only the provided context and profile data. If helpful, guide the user to relevant sections of the site.
+Answer the user's question using the provided profile information. Always include relevant site links to help users navigate to more detailed information.
 
-## Context Information:
-current time: {current_time}
-{context_text}
+## Long-term Memory (Profile Information):
+{profile_context}
 
-## Conversation History:
-{history_text}
+## Short-term Memory (Conversation History):
+{session_history}
+
+## Available Site Links:
+{chr(10).join([f"- {link['label']}: {link['href']}" for link in site_links])}
 
 ## Instructions:
-1. Use the context and conversation to provide an informative, concise answer.
+1. Use the profile information to provide an accurate, informative answer.
 2. Respond in the same language as the user (Korean or English).
-3. Limit your response to 500 characters unless the context truly demands more.
-4. Do not answer questions unrelated to Kangbeen Ko's profile.
-5. Reference specific sections of the site *only if* it helps the user find more information.
-6. Use only the exact labels from the allowed labels list below. Do not invent titles or paraphrase them.
-7. Do not repeat previously mentioned references unless they are essential for clarity.
+3. Keep your response concise (300-500 characters) but comprehensive.
+4. **ALWAYS include relevant site links** in your response using exact labels from the available links.
+5. Format important terms naturally so they can be linked (e.g., mention "LEGOLAS" when discussing the golf research).
+6. If the question is not related to Kangbeen Ko's profile, politely decline and redirect to relevant topics.
+7. When mentioning publications, projects, or specific sections, use their exact names from the available links.
 
-## Site Map:
-{site_map_text}
+## Example Response Format:
+"Kangbeen Ko's latest research is LEGOLAS, published at CHI 2025. You can find more details in the Papers section or visit the Research page."
 
-## Allowed Labels (Use exactly as written):
-{label_list}
+## Current Time:
+{current_time}
 
 ## User Question:
 {query}
@@ -158,17 +118,10 @@ current time: {current_time}
         response_text = result.text
 
         # Add links to response
-        linked_response = linkify_response(response_text, site_map)
+        linked_response = linkify_response(response_text, site_links)
 
         # Log to Langfuse
         if trace:
-            # Prepare prompt for logging
-            prompt_messages = [
-                {"role": msg.get("role"), "content": msg.get("parts", [{}])[0].get("text", "")}
-                for msg in chat_history
-            ]
-            prompt_messages.append({"role": "user", "content": prompt})
-
             trace.generation(
                 name='chat-response',
                 model='gemini-1.5-pro',
@@ -177,12 +130,11 @@ current time: {current_time}
                     "maxTokens": 1024
                 },
                 input=query,
-                prompt=prompt_messages,
+                prompt=[{"role": "user", "content": prompt}],
                 output=response_text,
                 metadata={
-                    "contextCount": len(contexts),
-                    "historyLength": len(chat_history),
-                    "sources": list(set([c.get("source", "unknown") for c in contexts]))
+                    "memoryType": "long-term + short-term",
+                    "profileDataCategories": list(ltm.get_all().keys()),
                 }
             )
 

@@ -1,26 +1,24 @@
 """
 LLM Chat Package
-Python-based LLM chat module for portfolio website
+Python-based LLM chat module for portfolio website with memory architecture
 """
 
 from .config import config
-from .embeddings import embed_text
-from .query_rewriter import rewrite_query, is_likely_question
-from .retrieval_planner import get_retrieval_plan
-from .vector_search import search_vector_db
+from .long_term_memory import LongTermMemory, get_long_term_memory
+from .short_term_memory import ShortTermMemory, SessionManager, get_session_manager
 from .response_generator import generate_response, linkify_response
 from .chat_handler import handle_chat_request
 
 __all__ = [
     "config",
-    "embed_text",
-    "rewrite_query",
-    "is_likely_question",
-    "get_retrieval_plan",
-    "search_vector_db",
+    "LongTermMemory",
+    "get_long_term_memory",
+    "ShortTermMemory",
+    "SessionManager",
+    "get_session_manager",
     "generate_response",
     "linkify_response",
     "handle_chat_request",
 ]
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

@@ -1,13 +1,13 @@
 """
 Chat Handler module
-Main handler for processing chat requests
+Main handler for processing chat requests with memory-based system
 """
 
 import uuid
 from typing import Dict, Any, List, Optional
 from .config import config
-from .vector_search import search_vector_db
 from .response_generator import generate_response
+from .short_term_memory import get_session_manager
 
 
 async def handle_chat_request(
@@ -16,11 +16,11 @@ async def handle_chat_request(
     session_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Handle a chat request and return a response
+    Handle a chat request using memory-based system
 
     Args:
         message: User's message
-        history: Chat history (list of messages)
+        history: Chat history (list of messages) - can be provided by client
         session_id: Optional session ID from client
 
     Returns:
@@ -31,9 +31,17 @@ async def handle_chat_request(
     if history is None:
         history = []
 
-    # Generate session and user IDs
-    trace_session_id = session_id or str(uuid.uuid4())
+    # Generate or use session ID
+    if not session_id:
+        session_id = str(uuid.uuid4())
+
     user_id = f"user-{uuid.uuid4().hex[:8]}"
+
+    # Get session manager
+    session_manager = get_session_manager()
+
+    # Get or create session's short-term memory
+    stm = session_manager.get_session(session_id)
 
     # Initialize Langfuse trace
     trace = None
@@ -41,10 +49,11 @@ async def handle_chat_request(
         trace = config.langfuse_client.trace(
             name='chat-session',
             user_id=user_id,
+            session_id=session_id,
             metadata={
-                "sessionId": trace_session_id,
                 "timestamp": None,  # Will be set automatically
-                "source": "python-api"
+                "source": "python-memory-api",
+                "memoryType": "long-term + short-term"
             }
         )
 
@@ -60,34 +69,36 @@ async def handle_chat_request(
                 )
             return error_response
 
-        # Search vector DB
-        search_result = await search_vector_db(message, history, trace)
+        # Add user message to short-term memory
+        stm.add_message("user", message)
 
-        relevant = search_result.get("relevant", False)
-        retrieval_required = search_result.get("retrievalRequired", False)
-        contexts = search_result.get("contexts", [])
-        rewritten_query = search_result.get("rewrittenQuery")
+        # Get conversation context from short-term memory
+        session_context = stm.get_context_for_llm(limit=10)
 
-        # If rewritten query is a question, return it directly
-        if rewritten_query and rewritten_query != message and rewritten_query.endswith('?'):
-            if trace:
-                trace.update(input=message, output=rewritten_query)
-            return {"response": rewritten_query}
+        # Generate response using long-term memory (profile) and short-term memory (conversation)
+        response = await generate_response(
+            query=message,
+            session_history=session_context,
+            trace=trace
+        )
 
-        # If not relevant, return rejection
-        if not relevant:
-            rejection = "Sorry. Your questions is not related to me."
-            if trace:
-                trace.update(input=message, output=rejection)
-            return {"response": rejection}
-
-        # Generate response (use contexts regardless of retrievalRequired)
-        response = await generate_response(message, contexts, history, trace)
+        # Add assistant response to short-term memory
+        stm.add_message("model", response)
 
         if trace:
-            trace.update(input=message, output=response)
+            trace.update(
+                input=message,
+                output=response,
+                metadata={
+                    "sessionMessageCount": stm.get_message_count(),
+                    "sessionId": session_id
+                }
+            )
 
-        return {"response": response}
+        return {
+            "response": response,
+            "sessionId": session_id
+        }
 
     except Exception as error:
         print(f"Chat handler error: {error}")

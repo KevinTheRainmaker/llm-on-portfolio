@@ -6,10 +6,7 @@ pydantic==2.5.3
 # Google Generative AI
 google-generativeai==0.3.2
 
-# Vector Database
-pinecone-client==3.0.2
-
-# Observability
+# Observability (Optional)
 langfuse==2.2.5
 
 # Utilities
