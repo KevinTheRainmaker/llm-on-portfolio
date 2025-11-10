@@ -113,7 +113,7 @@ Answer the user's question using the provided profile information. Always includ
 """
 
         # Generate response using Gemini
-        model = genai.GenerativeModel(config.chat_model_name)
+        model = genai.GenerativeModel('gemini-1.5-pro-latest')
         result = model.generate_content(prompt)
         response_text = result.text
 
