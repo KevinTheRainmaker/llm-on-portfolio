@@ -1,16 +1,19 @@
 import type { APIRoute } from 'astro';
-import { getLongTermMemory } from '@/lib/long-term-memory';
-import { getSessionManager } from '@/lib/short-term-memory';
-import { generateResponse } from '@/lib/response-generator';
 
 // prerender 비활성화
 export const prerender = false;
 
+// Python API URL (Vercel serverless function)
+const PYTHON_API_URL = import.meta.env.PYTHON_API_URL || '/api/chat';
+
 /**
- * Chat API endpoint - Memory-based architecture
+ * Chat API endpoint - Proxies to Python Vercel serverless function
  *
- * Uses long-term memory (profile data) and short-term memory (session history)
- * to generate contextual responses with automatic link generation.
+ * Forwards requests to Python API which handles:
+ * - Long-term memory (profile data)
+ * - Short-term memory (session history)
+ * - Response generation with Gemini
+ * - Automatic link generation
  */
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -25,38 +28,33 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Generate or use session ID
-    const finalSessionId = sessionId || crypto.randomUUID();
+    // Forward to Python API
+    const pythonResponse = await fetch(`${PYTHON_API_URL}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        history,
+        sessionId: sessionId || crypto.randomUUID(),
+      }),
+    });
 
-    // Get memory systems
-    const ltm = getLongTermMemory();
-    const sessionManager = getSessionManager();
-    const stm = sessionManager.getSession(finalSessionId);
+    if (!pythonResponse.ok) {
+      const errorText = await pythonResponse.text();
+      console.error('Python API error:', errorText);
 
-    // Add user message to short-term memory
-    stm.addMessage('user', message);
+      return new Response(
+        JSON.stringify({ error: '서버 오류가 발생했습니다.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Get contexts
-    const profileContext = ltm.getContextForLLM();
-    const sessionContext = stm.getContextForLLM(10);
-    const siteLinks = ltm.getSiteLinks();
-
-    // Generate response
-    const response = await generateResponse(
-      message,
-      profileContext,
-      sessionContext,
-      siteLinks
-    );
-
-    // Add assistant response to short-term memory
-    stm.addMessage('model', response);
+    const result = await pythonResponse.json();
 
     return new Response(
-      JSON.stringify({
-        response,
-        sessionId: finalSessionId,
-      }),
+      JSON.stringify(result),
       {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
