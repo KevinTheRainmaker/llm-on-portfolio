@@ -77,7 +77,7 @@ ${query}
 ## Response:
 `;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     const result = await model.generateContent(prompt);
     const response = result.response;
     const responseText = response.text();
