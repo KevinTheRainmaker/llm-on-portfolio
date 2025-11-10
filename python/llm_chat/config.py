@@ -6,7 +6,13 @@ Manages environment variables and API clients initialization
 import os
 from typing import Optional
 from google.generativeai import configure
-from langfuse import Langfuse
+
+try:
+    from langfuse import Langfuse
+    HAS_LANGFUSE = True
+except ImportError:
+    HAS_LANGFUSE = False
+    Langfuse = None
 
 
 class Config:
@@ -34,13 +40,16 @@ class Config:
             configure(api_key=self.gemini_api_key)
 
         # Initialize Langfuse (optional)
-        self.langfuse_client: Optional[Langfuse] = None
-        if self.langfuse_public_key and self.langfuse_secret_key:
-            self.langfuse_client = Langfuse(
-                public_key=self.langfuse_public_key,
-                secret_key=self.langfuse_secret_key,
-                host=self.langfuse_host
-            )
+        self.langfuse_client = None
+        if HAS_LANGFUSE and self.langfuse_public_key and self.langfuse_secret_key:
+            try:
+                self.langfuse_client = Langfuse(
+                    public_key=self.langfuse_public_key,
+                    secret_key=self.langfuse_secret_key,
+                    host=self.langfuse_host
+                )
+            except Exception as e:
+                print(f"Warning: Langfuse initialization failed: {e}")
 
 
 # Global configuration instance

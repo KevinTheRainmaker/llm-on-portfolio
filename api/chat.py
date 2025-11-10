@@ -7,12 +7,16 @@ import sys
 # Add python directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
 
+# Disable Langfuse for Vercel (optional dependency issue)
+os.environ['LANGFUSE_PUBLIC_KEY'] = ''
+os.environ['LANGFUSE_SECRET_KEY'] = ''
+
 try:
     from llm_chat import handle_chat_request
     HAS_LLM_CHAT = True
-except ImportError:
+except ImportError as e:
     HAS_LLM_CHAT = False
-    print("Warning: llm_chat module not available")
+    print(f"Warning: llm_chat module not available: {e}")
 
 
 class handler(BaseHTTPRequestHandler):
