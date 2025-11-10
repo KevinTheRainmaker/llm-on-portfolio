@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { generateResponse } from '../../lib/response-generator';
 import { getSessionManager } from '../../lib/short-term-memory';
+import { getLongTermMemory } from '../../lib/long-term-memory';
 
 // prerender 비활성화
 export const prerender = false;
@@ -75,6 +76,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Development: Use TypeScript implementation directly
     const sessionManager = getSessionManager();
     const stm = sessionManager.getSession(currentSessionId);
+    const ltm = getLongTermMemory();
 
     // Add user message to short-term memory
     stm.addMessage('user', message);
@@ -82,8 +84,12 @@ export const POST: APIRoute = async ({ request }) => {
     // Get conversation context
     const sessionContext = stm.getContextForLLM(10);
 
+    // Get profile context and site links from long-term memory
+    const profileContext = ltm.getContextForLLM();
+    const siteLinks = ltm.getSiteLinks();
+
     // Generate response
-    const response = await generateResponse(message, sessionContext);
+    const response = await generateResponse(message, profileContext, sessionContext, siteLinks);
 
     // Add assistant response to short-term memory
     stm.addMessage('model', response);
