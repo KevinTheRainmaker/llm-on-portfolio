@@ -22,7 +22,7 @@ class Config:
         self.langfuse_host: str = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
         # Model names
-        self.chat_model_name: str = "gemini-1.5-pro"
+        self.chat_model_name: str = "gemini-1.5-pro-latest"
 
         # Initialize clients
         self._init_clients()
