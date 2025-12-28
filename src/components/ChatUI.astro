@@ -518,6 +518,7 @@ const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
         }
         
         // API 엔드포인트 호출
+        // sessionId를 요청에 포함하여 세션 유지
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: {
@@ -526,6 +527,7 @@ const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
           body: JSON.stringify({
             message: userMessage,
             history: chatHistory,
+            sessionId: window.chatState.sessionId, // 세션 ID 전달
           }),
         });
         
@@ -538,6 +540,13 @@ const API_KEY = import.meta.env.PUBLIC_GEMINI_API_KEY || "";
         }
         
         const data = await response.json();
+        
+        // 서버에서 반환된 sessionId를 저장 (새 세션인 경우)
+        if (data.sessionId && data.sessionId !== window.chatState.sessionId) {
+          console.log('새 세션 ID 받음:', data.sessionId);
+          window.chatState.sessionId = data.sessionId;
+          localStorage.setItem('chatSessionId', data.sessionId);
+        }
         
         // 응답 메시지 표시
         addMessage(data.response, 'assistant');

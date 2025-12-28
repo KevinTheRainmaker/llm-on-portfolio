@@ -2,12 +2,19 @@ import type { APIRoute } from 'astro';
 import { generateResponse } from '../../lib/response-generator';
 import { getSessionManager } from '../../lib/short-term-memory';
 import { getLongTermMemory } from '../../lib/long-term-memory';
+import { checkRelevance, generateRejectionMessage } from '../../lib/relevance-filter';
+import { detectLanguage } from '../../lib/language-detector';
 
 // prerender 비활성화
 export const prerender = false;
 
 // Check if running on Vercel (production)
 const IS_VERCEL = import.meta.env.VERCEL === '1';
+
+// Option to use Python server in development (set USE_PYTHON_SERVER=true in .env)
+// This allows using LangChain memory features in development
+const USE_PYTHON_SERVER = import.meta.env.USE_PYTHON_SERVER === 'true' || import.meta.env.USE_PYTHON_SERVER === '1';
+const PYTHON_SERVER_URL = import.meta.env.PYTHON_SERVER_URL || 'http://localhost:8000';
 
 /**
  * Chat API endpoint
@@ -37,11 +44,50 @@ export const POST: APIRoute = async ({ request }) => {
     // Generate or use session ID
     const currentSessionId = sessionId || crypto.randomUUID();
 
-    // Production: Forward to Python serverless function
-    if (IS_VERCEL) {
+    // Get session manager for language detection
+    const sessionManager = getSessionManager();
+    const stm = sessionManager.getSession(currentSessionId);
+
+    // Detect language from user message
+    const detectedLanguage = detectLanguage(message);
+    
+    // Update preferred language in short-term memory if not set or if detected language is different
+    if (!stm.preferredLanguage || detectedLanguage !== stm.preferredLanguage) {
+      stm.setPreferredLanguage(detectedLanguage);
+    }
+    
+    // Get preferred language from short-term memory
+    const preferredLanguage = stm.getPreferredLanguage();
+
+    // Check if question is relevant to profile
+    const relevanceCheck = await checkRelevance(message);
+    if (!relevanceCheck.relevant) {
+      // Generate rejection message using Gemini 2.5 Flash with preferred language
+      const rejectionMessage = await generateRejectionMessage(message, preferredLanguage);
+      return new Response(
+        JSON.stringify({
+          response: rejectionMessage,
+          sessionId: currentSessionId,
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Production or Development with Python server: Forward to Python server
+    if (IS_VERCEL || USE_PYTHON_SERVER) {
       try {
-        const url = new URL('/api/chat', request.url);
-        const pythonResponse = await fetch(url.toString(), {
+        // In development with Python server, use the configured URL
+        // In production (Vercel), use the same origin
+        const pythonUrl = IS_VERCEL 
+          ? new URL('/api/chat', request.url).toString()
+          : `${PYTHON_SERVER_URL}/api/chat`;
+        
+        console.log('[CHAT API] Forwarding to Python server:', pythonUrl);
+        
+        const pythonResponse = await fetch(pythonUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -74,15 +120,24 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Development: Use TypeScript implementation directly
-    const sessionManager = getSessionManager();
-    const stm = sessionManager.getSession(currentSessionId);
+    // Note: stm is already created above for language detection
     const ltm = getLongTermMemory();
 
-    // Add user message to short-term memory
+    // Add user message to short-term memory FIRST
+    // This ensures the message is included in the context
     stm.addMessage('user', message);
 
-    // Get conversation context
-    const sessionContext = stm.getContextForLLM(10);
+    // Debug: Log memory state before processing
+    const memoryBefore = stm.getContextForLLM(20);
+    console.log('[MEMORY DEBUG] Session ID:', currentSessionId);
+    console.log('[MEMORY DEBUG] Total messages in session:', stm.getMessageCount());
+    console.log('[MEMORY DEBUG] Memory before response generation:');
+    console.log('[MEMORY DEBUG]', memoryBefore);
+    console.log('[MEMORY DEBUG] Current user message:', message.substring(0, 100));
+
+    // Get conversation context (increased limit for better context retention)
+    // This should now include the current user message
+    const sessionContext = stm.getContextForLLM(20);
 
     // Get profile context and site links from long-term memory
     const profileContext = ltm.getContextForLLM();
@@ -90,6 +145,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Generate response
     const response = await generateResponse(message, profileContext, sessionContext, siteLinks);
+
+    // Debug: Log memory state after processing
+    const memoryAfter = stm.getContextForLLM(20);
+    console.log('[MEMORY DEBUG] Memory after response generation:');
+    console.log('[MEMORY DEBUG]', memoryAfter);
+    console.log('[MEMORY DEBUG] Generated response:', response.substring(0, 100));
 
     // Add assistant response to short-term memory
     stm.addMessage('model', response);

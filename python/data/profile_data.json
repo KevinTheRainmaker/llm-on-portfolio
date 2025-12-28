@@ -53,11 +53,11 @@
       "authors": "Ko, K., Oh, M., Seong, M., & Kim, S. J.",
       "journal": "Extended Abstracts of the CHI Conference on Human Factors in Computing Systems",
       "time": "May 2025",
-      "link": "https://programs.sigchi.org/chi/2025/program/content/194268",
+      "link": "https://dl.acm.org/doi/10.1145/3706599.3720141",
       "thumbnail": "/images/publications/LEGOLAS_video_figure.gif",
       "highlight": true,
       "abstract": "LEGOLAS is an innovative LLM-augmented system designed to enhance golf skill learning and training. It combines computer vision with large language models to analyze swing mechanics and provide personalized, natural language feedback to golfers of all levels. The system offers real-time analysis, customized training plans, and progression tracking, creating a more accessible and efficient approach to golf improvement. This paper presents our findings from a user study with 24 participants, demonstrating significant skill improvements compared to traditional training methods.",
-      "summary": "**Summary**\nExisting self-training systems can visualize movement errors but **lack explanations for causes and corrections**, limiting users' ability to improve independently. To bridge this gap, the study introduced a **LLM and RAG-based architecture** that delivers **personalized, principle-based verbal feedback**. \nThe system was developed using 3D motion capture, joint-level error detection, and **verbal coaching via TTS**. In a **4-condition user study (n=12)**, even **low-frequency feedback** led to sustained accuracy gains, indicating **improved self-directed learning** and **reduced dependence on external feedback**.\n\n**Key Results**\n- **Significant improvement in movement accuracy** with verbal feedback *(F(1,11) = 11.623, p < 0.01)*\n- **Increased self-evaluation confidence**, with interaction effects across feedback types *(F(1,11) = 5.410, p < 0.05)*\n- **No increase in cognitive load** under verbal feedback conditions *(NASA-TLX)*"
+      "summary": "**Summary**\nExisting self-training systems can visualize movement errors but **provide limited support for explaining underlying causes or corrective strategies**, which constrains users’ ability to improve independently. To address this limitation, this study introduces an **LLM- and RAG-based feedback architecture** that delivers **personalized, principle-driven verbal coaching**.\n\nThe system integrates vision-based 3D motion capture, joint-level error detection, and **TTS-based verbal feedback**. In a **four-condition user study (n = 12)**, conditions with verbal feedback demonstrated **sustained improvements in movement accuracy**, even under **low-frequency feedback**, suggesting enhanced **self-directed learning** and **reduced reliance on external guidance**.\n\n**Key Results**\n- **Significant improvement in movement accuracy** with verbal feedback *(F(1,11) = 11.623, p < .01)*- **Increased confidence in self-evaluation**, with interaction effects across feedback types *(F(1,11) = 5.410, p < .05)*- **No significant increase in cognitive load** under verbal feedback conditions *(NASA-TLX)*"
     },
     {
       "title": "Leveraging voice for early detection of chronic kidney disease: Enabling continuous monitoring in remote healthcare",
@@ -117,7 +117,12 @@
       "thumbnail": "/images/projects/be_with_you.png",
       "link": "https://youtu.be/BK_KMwFTS7g",
       "time": "2024",
-      "tags": ["Emotional Reflection", "Affective Design", "Self-healing", "LLM"]
+      "tags": [
+        "Emotional Reflection",
+        "Affective Design",
+        "Self-healing",
+        "LLM"
+      ]
     },
     {
       "title": "Peach Seoga: Text Simplification Platform for Slow Learners",

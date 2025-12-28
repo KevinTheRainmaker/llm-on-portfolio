@@ -3,7 +3,7 @@ Short-term Memory Module
 Manages conversation history for each session
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 import uuid
 
@@ -23,6 +23,7 @@ class ShortTermMemory:
         """
         self.session_id = session_id or str(uuid.uuid4())
         self.history: List[Dict[str, Any]] = []
+        self.preferred_language: Optional[str] = None  # "en" or "ko"
         self.created_at = datetime.utcnow()
         self.last_updated = datetime.utcnow()
 
@@ -107,11 +108,32 @@ class ShortTermMemory:
         """Get total number of messages"""
         return len(self.history)
 
+    def set_preferred_language(self, language: str):
+        """
+        Set the preferred language for this session
+        
+        Args:
+            language: Language code ("en" or "ko")
+        """
+        if language in ["en", "ko"]:
+            self.preferred_language = language
+            self.last_updated = datetime.utcnow()
+
+    def get_preferred_language(self) -> str:
+        """
+        Get the preferred language for this session
+        
+        Returns:
+            Language code ("en" or "ko"), defaults to "en"
+        """
+        return self.preferred_language or "en"
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
             "session_id": self.session_id,
             "history": self.history,
+            "preferred_language": self.preferred_language,
             "created_at": self.created_at.isoformat(),
             "last_updated": self.last_updated.isoformat(),
             "message_count": len(self.history)

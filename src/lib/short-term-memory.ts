@@ -13,12 +13,14 @@ export interface Message {
 export class ShortTermMemory {
   sessionId: string;
   history: Message[];
+  preferredLanguage: string | null; // "en" or "ko"
   createdAt: Date;
   lastUpdated: Date;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
     this.history = [];
+    this.preferredLanguage = null;
     this.createdAt = new Date();
     this.lastUpdated = new Date();
   }
@@ -107,6 +109,23 @@ export class ShortTermMemory {
    */
   getMessageCount(): number {
     return this.history.length;
+  }
+
+  /**
+   * Set the preferred language for this session
+   */
+  setPreferredLanguage(language: string) {
+    if (language === 'en' || language === 'ko') {
+      this.preferredLanguage = language;
+      this.lastUpdated = new Date();
+    }
+  }
+
+  /**
+   * Get the preferred language for this session
+   */
+  getPreferredLanguage(): string {
+    return this.preferredLanguage || 'en';
   }
 }
 

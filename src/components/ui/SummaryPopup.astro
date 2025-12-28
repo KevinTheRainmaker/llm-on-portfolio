@@ -6,7 +6,7 @@
 <div id="summaryPopup" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden overflow-auto py-10">
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 my-auto">
     <div class="flex justify-between items-start mb-4">
-      <h3 id="popupTitle" class="text-xl font-bold pr-4"></h3>
+      <h3 id="popupTitle" class="text-xl font-bold pr-4 text-gray-900 dark:text-white"></h3>
       <button id="closePopup" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex-shrink-0">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -74,26 +74,59 @@
     function formatSummaryText(text) {
       if (!text) return '';
       
-      // Handle line breaks
-      let formattedText = text.replace(/\n/g, '<br>');
+      // Split text into lines first
+      const lines = text.split('\n');
+      const formattedLines = [];
+      let inList = false;
       
-      // Handle bullet points (- item)
-      formattedText = formattedText.replace(/- (.*?)(<br|$)/g, '<li>$1</li>');
-      
-      // Wrap lists in <ul> if there are any bullet points
-      if (formattedText.includes('<li>')) {
-        formattedText = formattedText.replace(/(<li>.*?<\/li>)+/g, '<ul class="pl-5 list-disc">$&</ul>');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Check if line is a bullet point
+        if (line.startsWith('- ')) {
+          if (!inList) {
+            formattedLines.push('<ul class="list-disc pl-6 mb-4 space-y-2">');
+            inList = true;
+          }
+          // Remove the bullet marker and process the content
+          const content = line.substring(2);
+          formattedLines.push(`<li>${formatInlineMarkdown(content)}</li>`);
+        } else {
+          // Close list if we were in one
+          if (inList) {
+            formattedLines.push('</ul>');
+            inList = false;
+          }
+          
+          // Add non-empty lines as paragraphs
+          if (line) {
+            formattedLines.push(`<p class="mb-3">${formatInlineMarkdown(line)}</p>`);
+          } else {
+            // Empty line - add spacing
+            formattedLines.push('<br>');
+          }
+        }
       }
       
-      // Handle bold text wrapped in ** or __
-      formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      formattedText = formattedText.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      // Close list if still open
+      if (inList) {
+        formattedLines.push('</ul>');
+      }
       
-      // Handle italic text wrapped in * or _
-      formattedText = formattedText.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
-      formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>');
+      return formattedLines.join('');
+    }
+    
+    // Helper function to format inline markdown (bold, italic)
+    function formatInlineMarkdown(text) {
+      if (!text) return '';
       
-      return formattedText;
+      // Handle bold text wrapped in **
+      let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // Handle italic text wrapped in *
+      formatted = formatted.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+      
+      return formatted;
     }
     
     summaryBtns.forEach(btn => {
