@@ -1,18 +1,23 @@
 {
-  "github": {
-    "silent": true
-  },
+  "github": { "silent": true },
+
   "buildCommand": "node scripts/copy-python-to-api.js && npm run build",
+
   "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
     {
       "src": "api/**/*.py",
       "use": "@vercel/python"
     }
   ],
+
   "routes": [
-    {
-      "src": "/api/chat",
-      "dest": "/api/chat.py"
-    }
+    { "src": "/api/chat", "dest": "/api/chat.py" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
