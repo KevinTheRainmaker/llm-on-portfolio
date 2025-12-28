@@ -2,7 +2,7 @@
   "github": {
     "silent": true
   },
-  "buildCommand": "node scripts/copy-python-to-api.js",
+  "buildCommand": "node scripts/copy-python-to-api.js && npm run build",
   "builds": [
     {
       "src": "api/**/*.py",
