@@ -2,7 +2,7 @@
   "github": {
     "silent": true
   },
-  "buildCommand": "npm run vercel-build",
+  "buildCommand": "node scripts/copy-python-to-api.js",
   "builds": [
     {
       "src": "api/**/*.py",
