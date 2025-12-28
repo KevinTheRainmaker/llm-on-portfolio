@@ -6,21 +6,31 @@ import traceback
 
 # Add python directory to path
 # Try multiple paths for Vercel deployment
+# Vercel deploys the entire project, so python/ directory should be available
 python_paths = [
-    os.path.join(os.path.dirname(__file__), 'llm_chat'),  # Vercel (copied to api/llm_chat)
-    os.path.join(os.path.dirname(__file__), '..', 'python'),  # Local development
-    os.path.join(os.path.dirname(__file__), 'python'),  # Alternative Vercel path
-    '/var/task/python',  # Vercel Lambda path
+    os.path.join(os.path.dirname(__file__), '..', 'python'),  # Vercel: api/../python
+    os.path.join(os.path.dirname(__file__), 'llm_chat'),  # If copied to api/llm_chat
+    '/var/task/python',  # Vercel Lambda absolute path
+    '/var/task/api/llm_chat',  # Vercel Lambda if copied
     os.path.join(os.getcwd(), 'python'),  # Current working directory
+    os.path.join(os.getcwd(), 'api', 'llm_chat'),  # If copied to api/llm_chat
 ]
 
 for path in python_paths:
     if os.path.exists(path):
-        sys.path.insert(0, path)
-        print(f"[INIT] Added Python path: {path}")
+        # If it's the python directory, add the llm_chat subdirectory
+        if path.endswith('python') and os.path.exists(os.path.join(path, 'llm_chat')):
+            sys.path.insert(0, os.path.join(path, 'llm_chat'))
+            print(f"[INIT] Added Python path: {os.path.join(path, 'llm_chat')}")
+        else:
+            sys.path.insert(0, path)
+            print(f"[INIT] Added Python path: {path}")
         break
 else:
     print(f"[INIT] Warning: Python directory not found. Tried: {python_paths}")
+    print(f"[INIT] Current working directory: {os.getcwd()}")
+    print(f"[INIT] Script directory: {os.path.dirname(__file__)}")
+    print(f"[INIT] Files in script directory: {os.listdir(os.path.dirname(__file__))}")
 
 # Disable Langfuse for Vercel (optional dependency issue)
 os.environ['LANGFUSE_PUBLIC_KEY'] = ''
