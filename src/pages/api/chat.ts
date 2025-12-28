@@ -80,9 +80,9 @@ export const POST: APIRoute = async ({ request }) => {
     if (IS_VERCEL || USE_PYTHON_SERVER) {
       try {
         // In development with Python server, use the configured URL
-        // In production (Vercel), use the same origin
+        // In production (Vercel), use the Python serverless function directly
         const pythonUrl = IS_VERCEL 
-          ? new URL('/api/chat', request.url).toString()
+          ? new URL('/api/chat.py', request.url).toString()
           : `${PYTHON_SERVER_URL}/api/chat`;
         
         console.log('[CHAT API] Forwarding to Python server:', pythonUrl);
