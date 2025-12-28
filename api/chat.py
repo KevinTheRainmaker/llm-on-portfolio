@@ -5,7 +5,22 @@ from datetime import datetime
 import sys
 
 # Add python directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
+# Try multiple paths for Vercel deployment
+python_paths = [
+    os.path.join(os.path.dirname(__file__), 'llm_chat'),  # Vercel (copied to api/llm_chat)
+    os.path.join(os.path.dirname(__file__), '..', 'python'),  # Local development
+    os.path.join(os.path.dirname(__file__), 'python'),  # Alternative Vercel path
+    '/var/task/python',  # Vercel Lambda path
+    os.path.join(os.getcwd(), 'python'),  # Current working directory
+]
+
+for path in python_paths:
+    if os.path.exists(path):
+        sys.path.insert(0, path)
+        print(f"Added Python path: {path}")
+        break
+else:
+    print(f"Warning: Python directory not found. Tried: {python_paths}")
 
 # Disable Langfuse for Vercel (optional dependency issue)
 os.environ['LANGFUSE_PUBLIC_KEY'] = ''

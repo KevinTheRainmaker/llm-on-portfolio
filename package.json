@@ -4,10 +4,11 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "node scripts/copy-python-to-api.js && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "convert-to-md": "node scripts/convert-to-md.js"
+    "convert-to-md": "node scripts/convert-to-md.js",
+    "vercel-build": "node scripts/copy-python-to-api.js && astro build"
   },
   "dependencies": {
     "@astrojs/node": "^9.1.3",

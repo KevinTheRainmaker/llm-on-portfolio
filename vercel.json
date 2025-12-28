@@ -2,10 +2,17 @@
   "github": {
     "silent": true
   },
+  "buildCommand": "npm run vercel-build",
   "builds": [
     {
       "src": "api/**/*.py",
       "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/chat",
+      "dest": "/api/chat.py"
     }
   ]
 }
