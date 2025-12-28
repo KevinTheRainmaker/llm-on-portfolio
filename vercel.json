@@ -1,9 +1,11 @@
 {
   "github": { "silent": true },
   "buildCommand": "npm run vercel-build",
-  "functions": {
-    "api/chat.py": {
-      "runtime": "python3.12"
+  "builds": [
+    {
+      "src": "api/**/*.py",
+      "use": "@vercel/python"
     }
-  }
+  ],
+  "routes": [{ "src": "/api/chat", "dest": "/api/chat.py" }]
 }
