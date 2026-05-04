@@ -1,0 +1,17 @@
+# FastAPI and server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+
+# Google Generative AI (updated for langchain-google-genai compatibility)
+google-generativeai>=0.8.0
+
+# LangChain for memory management
+langchain==0.3.20
+langchain-google-genai==2.0.7
+
+# Observability (Optional)
+langfuse==2.2.5
+
+# Utilities
+python-dotenv==1.0.0
